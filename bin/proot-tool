@@ -1,0 +1,1004 @@
+#!/system/bin/sh
+
+# ==== Color libray ====
+# https://github.com/vaniacer/bash_color/blob/master/color
+#----------------------------------------------------------------------------+
+#Color picker, usage: printf $BLD$CUR$RED$BBLU'Hello World!'$DEF             |
+#-----------------------------+------------------------------------+---------+
+#         Text color          |         Background color           |         |
+#-------------+---------------+----------------+-------------------+         |
+# Base color  | Lighter shade | Base color     | Lighter shade     |         |
+#-------------+---------------+----------------+-------------------+         |
+BLK='\033[30m'; blk='\033[90m'; BBLK='\033[40m'; bblk='\033[100m' #| Black   |
+RED='\033[31m'; red='\033[91m'; BRED='\033[41m'; bred='\033[101m' #| Red     |
+GRN='\033[32m'; grn='\033[92m'; BGRN='\033[42m'; bgrn='\033[102m' #| Green   |
+YLW='\033[33m'; ylw='\033[93m'; BYLW='\033[43m'; bylw='\033[103m' #| Yellow  |
+BLU='\033[34m'; blu='\033[94m'; BBLU='\033[44m'; bblu='\033[104m' #| Blue    |
+MGN='\033[35m'; mgn='\033[95m'; BMGN='\033[45m'; bmgn='\033[105m' #| Magenta |
+CYN='\033[36m'; cyn='\033[96m'; BCYN='\033[46m'; bcyn='\033[106m' #| Cyan    |
+WHT='\033[37m'; wht='\033[97m'; BWHT='\033[47m'; bwht='\033[107m' #| White   |
+#-------------------------------{ Effects }------------------------+---------+
+DEF='\033[0m'   #Default color and effects                                   |
+BLD='\033[1m'   #Bold\brighter                                               |
+DIM='\033[2m'   #Dim\darker                                                  |
+CUR='\033[3m'   #Italic font                                                 |
+UND='\033[4m'   #Underline                                                   |
+INV='\033[7m'   #Inverted                                                    |
+COF='\033[?25l' #Cursor Off                                                  |
+CON='\033[?25h' #Cursor On                                                   |
+#----------------------------------------------------------------------------+
+
+# ==== Library to draw box ====
+genstr() {
+	i=0
+	str=""
+	while [ "$1" -gt $i ]
+	do
+		str=${str}$2
+		i=$((i+1))
+	done
+	echo "$str"
+}
+
+box_title() {
+	num=$(( (BOX_LEN - 2 - 2 - ${#1})/2 ))
+	line=$(genstr $num '─')
+	oddstr=""
+	[ $((${#1}%2)) -eq 0 ] && oddstr="─"
+	printf "${BOX_MARGIN_LEFT}┌${line} ${1} ${line}${oddstr}┐\n"
+}
+
+box_content() {
+	CONTENT_REMAIN_LEN=$(( BOX_LEN - CONTENT_MARGIN_LEFT_LEN - 2 ))
+	fill_up_str=$(genstr $(( CONTENT_REMAIN_LEN - $2 )) ' ')
+	printf "${BOX_MARGIN_LEFT}│${CONTENT_MARGIN_LEFT}${1}${fill_up_str}│\n"
+}
+
+box_line() {
+	# printf "${BOX_MARGIN_LEFT}$(genstr $(( BOX_LEN - CONTENT_MARGIN_LEFT_LEN - 2 ))) '─')│"
+	printf "${BOX_MARGIN_LEFT}│$(genstr $(( BOX_LEN - 2 )) '─')│\n"
+}
+
+box_bottom() {
+	printf "${BOX_MARGIN_LEFT}└$(genstr $(( BOX_LEN - 2 )) '─')┘\n"
+}
+
+BOX_LEN=45
+BOX_MARGIN_LEFT_LEN=2
+CONTENT_MARGIN_LEFT_LEN=2
+
+BOX_MARGIN_LEFT=$(genstr $BOX_MARGIN_LEFT_LEN ' ')
+CONTENT_MARGIN_LEFT=$(genstr $CONTENT_MARGIN_LEFT_LEN ' ')
+# ================
+
+show_help(){
+	__this_file_name=$(basename "$0")
+	printf "\
+${CYN}${BLD}Tool to install Linux under PRoot on Android${DEF}
+
+${BLD}${CYN}Usage:${DEF} ${ylw}${__this_file_name} [options...] [file] [dir]${DEF}
+
+${BLD}${CYN}Examples:${DEF}
+  ${ylw}${__this_file_name} --install ./distro-rootfs.tar.xz ./distro${DEF}
+
+${BLD}${CYN}Options:${DEF}
+  ${ylw}--fix-l2s	[dir]		${cyn}# Fix proot link2symlink.${DEF}
+  ${ylw}--gen-start	[<dir>|<file>]	${cyn}# Generate startup script only.${DEF}
+  ${ylw}--install 	[archive] [dir]	${cyn}# Install rootfs container.${DEF}
+  ${ylw}--lib-uid 	[dir]		${cyn}# Define the uid of essentials lib dir
+  ${ylw}--help			${cyn}# Show help information.${DEF}
+  ${ylw}--update			${cyn}# Update this tool to latest.${DEF}
+"
+}
+
+is_anotherterm() {
+	[ -n "${APP_ID}" ] && (echo "$APP_ID"|grep -q "anotherterm")
+}
+
+get_anoterterm_appid(){
+	if is_anotherterm; then
+		echo "${APP_ID#green_green_avk.anotherterm.}"
+	fi
+}
+
+anotherterm_is_dist(){
+	[ "$(get_anoterterm_appid)" = "dist" ]
+}
+
+anotherterm_is_oldgood(){
+	[ "$(get_anoterterm_appid)" = "oldgood" ]
+}
+
+is_termux() {
+	[ -n "${TERMUX_VERSION}" ]
+}
+
+validate_tarball_file() {
+	if [ -f "$1" ]; then
+		case $(ls "$1") in
+			*tar.gz|*tgz|*tar.xz|*txz|*tar)
+				;;
+			*)
+				printf "${red}ERROR: UNKOWN ARCHIVE TYPE${DEF}\n"
+				exit 1
+				;;
+		esac
+	else
+		printf "${red}ERROR: SOURCE ARCHIVE FILE NOT FOUND${DEF}\n"
+		exit 1
+	fi
+}
+
+# Validate if anothermterm essentail plugin available on anothermterm
+validate_anotherterm_essentials_plugin(){
+	"$TERMSH" plugin -h green_green_avk.anothertermshellplugin_android10essentials >/dev/null 2>&1
+}
+
+decompress_rootfs() {
+	# We will use minitar if we can find it,
+	# else we use GUN tar if we can find,much slower,
+	# else we use tar, and reminds use threre might be issues.
+	
+	# With minitar we do not need to handle link2symlink, fastest.
+	# With tar we need to handle link2symlink, much slower.
+
+	validate_tar_decompress_tool(){
+		[ -x "$TAR_DECOMPRESS_TOOL_PATH" ]
+	}
+	
+	prepare_to_decompress(){
+		mkdir -p "$BASE_DIR"
+		[ ! -d "$BASE_DIR" ] && printf "${red}ERROR: FAILED TO CREATE DEST DIR${DEF}\n" && exit 1
+		mkdir -p "$BASE_DIR/rootfs"
+		printf "${cyn}Decompressing rootfs, please be patient.${DEF}\n"
+	}
+
+	if is_anotherterm && validate_anotherterm_essentials_plugin; then
+		TAR_DECOMPRESS_TOOL_PATH=$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials minitar)
+	elif [ -x "$LIBMINITAR_PATH" ]; then
+		TAR_DECOMPRESS_TOOL_PATH="$LIBMINITAR_PATH"
+	fi
+	if ! validate_tar_decompress_tool; then
+		TAR_DECOMPRESS_TOOL_PATH=$BIN_DIR/minitar
+	fi
+	if ! validate_tar_decompress_tool; then
+		TAR_DECOMPRESS_TOOL_PATH=$(command -v minitar)
+	fi
+
+	# printf  "${mgn}$TAR_DECOMPRESS_TOOL_PATH${DEF}\n"
+	
+	# If minitar is found
+	if validate_tar_decompress_tool; then
+		prepare_to_decompress
+		(cd "$BASE_DIR/rootfs" && "$TAR_DECOMPRESS_TOOL_PATH" -xf "$TARBALL" || :)
+	# Else we use tar, we will need proot to fix hardlink with link2symlink option
+	else
+		printf "${mgn}WARNING: minitar not found, using tar is much slower.${DEF}\n"
+
+		# Notify user if tar available in PATH is not GNU tar.
+		if ! (tar --version 2>/dev/null|head -n 1|grep -q 'tar (GNU tar)'); then
+			echo
+			printf "${BRED}Warning: tar binary that is available in PATH appears to be not a GNU tar. You may experience issues during installation, backup and restore operations.${RST}\n"
+			echo
+		fi
+		
+		validate_proot() {
+			[ -x "$PROOT_BIN_PATH" ]
+		}
+
+		# == Find proot binary path ==
+		PROOT_BIN_PATH=""
+		! validate_proot && ! is_anotherterm && validate_essentials_lib && PROOT_BIN_PATH="$LIBPROOT_PATH"
+		! validate_proot && PROOT_BIN_PATH="$(command -v proot)"
+		! validate_proot && PROOT_BIN_PATH="$BASE_DIR/proot"
+		! validate_proot && printf "${red}ERROR: PROOT_NOT_FOUND${DEF}\n" && exit 1
+		# ========
+		
+		prepare_to_decompress
+		PROOT_TMP_DIR=$BASE_DIR/tmp
+		mkdir -p "$PROOT_TMP_DIR"
+
+		(cd "$BASE_DIR/rootfs" && "$PROOT_BIN_PATH" --link2symlink tar -xf "$TARBALL" || :)
+	fi
+}
+
+setup_nameserver() {
+	box_title "Setup nameserver"
+	RESOLV_CONF=$BASE_DIR/rootfs/etc/resolv.conf
+	
+	gen_resolv_conf(){
+		NAMESERVER="8.8.8.8"
+		NAMESERVER_FB="8.8.4.4"
+		echo "\
+nameserver $NAMESERVER
+nameserver ${NAMESERVER_FB}\
+"		> "$RESOLV_CONF" && \
+		box_content "nameserver ${ylw}${NAMESERVER}${DEF}"  $(( 11 + ${#NAMESERVER} ))
+		box_content "nameserver ${ylw}${NAMESERVER_FB}${DEF}" $(( 11 + ${#NAMESERVER_FB} ))
+	}
+
+	if [ -h "$RESOLV_CONF" ]; then
+		if [ ! -s "$RESOLV_CONF" ]; then
+			rm -f "$RESOLV_CONF"
+			gen_resolv_conf
+		else
+			printf "${ylw}resolve.conf is symlink and not empty${DEF}\n"
+		fi
+	elif [ ! -s "$RESOLV_CONF" ]; then
+		gen_resolv_conf
+	fi
+	box_bottom
+}
+
+exists_profile_dir() {
+	[ -d "$BASE_DIR/rootfs/etc/profile.d" ]
+}
+
+add_locale_to_profile(){
+	if exists_profile_dir; then
+		LOCALE_FILE=$BASE_DIR/rootfs/etc/profile.d/locale.sh
+		if [ ! -f "$LOCALE_FILE" ]; then
+			echo "\
+export CHARSET=UTF-8
+export LANG=C.UTF-8
+export LC_COLLATE=C\
+"			> "$LOCALE_FILE" && \
+			box_content "created ${ylw}/etc/profile.d/locale.sh${DEF}" 32
+		else
+			box_content "${mgn}/etc/profile.d/locale.sh already exists${DEF}" 39
+		fi
+	fi
+}
+
+add_ps_to_profile() {
+	if exists_profile_dir; then
+		PS_FILE=$BASE_DIR/rootfs/etc/profile.d/ps.sh
+		if [ ! -f "$PS_FILE" ]; then
+			# command echo on old android dose not print correctly, use printf instead
+			printf "\
+PS1='\[\\\e[32m\]\\\u\[\\\e[33m\]@\[\\\e[32m\]\\\h\[\\\e[33m\]:\[\\\e[32m\]\\\w\[\\\e[33m\]\\\$\[\\\e[0m\] '
+PS2='\[\\\e[33m\]>\[\\\e[0m\] '\
+"			> "$PS_FILE" && \
+			box_content "created ${ylw}/etc/profile.d/ps.sh${DEF}" 28
+		else 
+			box_content "${mgn}/etc/profile.d/ps.sh already exists${DEF}" 35
+		fi
+	fi
+}
+
+add_cls_to_profile() {
+   	if exists_profile_dir; then
+		CLS_FILE=$BASE_DIR/rootfs/etc/profile.d/cls.sh
+		if [ ! -f "$CLS_FILE" ]; then
+			echo "alias cls='printf \"\\\033c\" && clear'" > "$CLS_FILE" && \
+			box_content "created ${ylw}/etc/profile.d/cls.sh${DEF}" 29
+		else
+			box_content "${mgn}/etc/profile.d/cls.sh already exists${DEF}" 36
+		fi
+	fi
+}
+
+add_termsh_to_bin() {
+	echo "
+#!/bin/sh
+
+unset LD_PRELOAD
+unset LD_LIBRARY_PATH
+/bin/_termsh "\$@"
+" > "$BASE_DIR/rootfs/bin/termsh" && chmod +x "$BASE_DIR/rootfs/bin/termsh"
+}
+
+# Fake restricted /proc entries on Android.
+# https://github.com/termux/termux-app/issues/1917
+setup_fake_proc() {
+	box_title "Setup fake proc"
+	mkdir -p "$BASE_DIR/rootfs/proc"
+	chmod 700 "$BASE_DIR/rootfs/proc"
+
+	FAKE_LOADAVG_FILE="$BASE_DIR/rootfs/proc/.loadavg"
+	if [ ! -f "$FAKE_LOADAVG_FILE" ]; then
+		echo "\
+0.00 0.00 0.00 1/85 430\
+" 		> "$FAKE_LOADAVG_FILE" && \
+		box_content "created ${ylw}/proc/.loadavg${DEF}" 22
+	else
+		box_content "${mgn}/proc/.loadavg already exists${DEF}" 29
+	fi
+
+	FAKE_STAT_FILE="${BASE_DIR}/rootfs/proc/.stat"
+	if [ ! -f "$FAKE_STAT_FILE" ]; then
+		echo "\
+cpu  83 0 258 13353 70 0 13 0 0 0
+cpu0 83 0 258 13353 70 0 13 0 0 0
+intr 51707 30 9 0 0 0 0 0 0 0 0 0 0 \
+156 0 0 246 0 0 656 431 0 1882 25 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ctxt 27869
+btime 1659083759
+processes 433
+procs_running 1
+procs_blocked 0
+softirq 46521 3 35243 33 431 1892 0 53 0 0 8866\
+"		> "$FAKE_STAT_FILE" && \
+		box_content "created ${ylw}/proc/.stat${DEF}" 19
+	else
+		box_content "${mgn}/proc/.stat already exists${DEF}" 26
+	fi
+
+	FAKE_UPTIME_FILE="${BASE_DIR}/rootfs/proc/.uptime"
+	if [ ! -f "$FAKE_UPTIME_FILE" ]; then
+		echo "\
+262.30 248.66\
+"		> "$FAKE_UPTIME_FILE" && \
+		box_content "created ${ylw}/proc/.uptime${DEF}" 21
+	else
+		box_content "${mgn}/proc/.uptime already exists${DEF}" 28
+	fi
+
+	FAKE_VERSION_FILE="${BASE_DIR}/rootfs/proc/.version"
+	if [ ! -f "$FAKE_VERSION_FILE" ]; then
+		echo "\
+Linux version 5.15.48-0-faked (builder@server) (gcc 11.2.1 20220219, GNU ld (GNU Binutils) 2.38) #1 SMP Mon, 20 Jun 2022 07:05:12 +0000\
+"		> "$FAKE_VERSION_FILE" && \
+		box_content "created ${ylw}/proc/.version${DEF}" 22
+	else
+		box_content "${mgn}/proc/.version already exists${DEF}" 29
+	fi
+
+	FAKE_VMSTAT_FILE="${BASE_DIR}/rootfs/proc/.vmstat"
+	if [ ! -f "$FAKE_VMSTAT_FILE" ]; then
+		echo "\
+nr_free_pages 216440
+nr_zone_inactive_anon 3964
+nr_zone_active_anon 78
+nr_zone_inactive_file 7628
+nr_zone_active_file 6580
+nr_zone_unevictable 0
+nr_zone_write_pending 48
+nr_mlock 0
+nr_page_table_pages 234
+nr_bounce 0
+nr_zspages 0
+nr_free_cma 0
+numa_hit 97119
+numa_miss 0
+numa_foreign 0
+numa_interleave 26798
+numa_local 97119
+numa_other 0
+nr_inactive_anon 3964
+nr_active_anon 78
+nr_inactive_file 7628
+nr_active_file 6580
+nr_unevictable 0
+nr_slab_reclaimable 3248
+nr_slab_unreclaimable 2926
+nr_isolated_anon 0
+nr_isolated_file 0
+workingset_nodes 0
+workingset_refault_anon 0
+workingset_refault_file 0
+workingset_activate_anon 0
+workingset_activate_file 0
+workingset_restore_anon 0
+workingset_restore_file 0
+workingset_nodereclaim 0
+nr_anon_pages 3927
+nr_mapped 5722
+nr_file_pages 14334
+nr_dirty 48
+nr_writeback 0
+nr_writeback_temp 0
+nr_shmem 124
+nr_shmem_hugepages 0
+nr_shmem_pmdmapped 0
+nr_file_hugepages 0
+nr_file_pmdmapped 0
+nr_anon_transparent_hugepages 1
+nr_vmscan_write 0
+nr_vmscan_immediate_reclaim 0
+nr_dirtied 1961
+nr_written 1913
+nr_kernel_misc_reclaimable 0
+nr_foll_pin_acquired 0
+nr_foll_pin_released 0
+nr_kernel_stack 1360
+nr_dirty_threshold 42555
+nr_dirty_background_threshold 21251
+pgpgin 61171
+pgpgout 8164
+pswpin 0
+pswpout 0
+pgalloc_dma 0
+pgalloc_dma32 110380
+pgalloc_normal 0
+pgalloc_movable 0
+allocstall_dma 0
+allocstall_dma32 0
+allocstall_normal 0
+allocstall_movable 0
+pgskip_dma 0
+pgskip_dma32 0
+pgskip_normal 0
+pgskip_movable 0
+pgfree 326980
+pgactivate 5779
+pgdeactivate 0
+pglazyfree 0
+pgfault 59673
+pgmajfault 322
+pglazyfreed 0
+pgrefill 0
+pgreuse 5692
+pgsteal_kswapd 0
+pgsteal_direct 0
+pgscan_kswapd 0
+pgscan_direct 0
+pgscan_direct_throttle 0
+pgscan_anon 0
+pgscan_file 0
+pgsteal_anon 0
+pgsteal_file 0
+zone_reclaim_failed 0
+pginodesteal 0
+slabs_scanned 0
+kswapd_inodesteal 0
+kswapd_low_wmark_hit_quickly 0
+kswapd_high_wmark_hit_quickly 0
+pageoutrun 0
+pgrotated 0
+drop_pagecache 0
+drop_slab 0
+oom_kill 0
+numa_pte_updates 0
+numa_huge_pte_updates 0
+numa_hint_faults 0
+numa_hint_faults_local 0
+numa_pages_migrated 0
+pgmigrate_success 0
+pgmigrate_fail 0
+thp_migration_success 0
+thp_migration_fail 0
+thp_migration_split 0
+compact_migrate_scanned 0
+compact_free_scanned 0
+compact_isolated 0
+compact_stall 0
+compact_fail 0
+compact_success 0
+compact_daemon_wake 0
+compact_daemon_migrate_scanned 0
+compact_daemon_free_scanned 0
+htlb_buddy_alloc_success 0
+htlb_buddy_alloc_fail 0
+unevictable_pgs_culled 24930
+unevictable_pgs_scanned 0
+unevictable_pgs_rescued 0
+unevictable_pgs_mlocked 0
+unevictable_pgs_munlocked 0
+unevictable_pgs_cleared 0
+unevictable_pgs_stranded 0
+thp_fault_alloc 14
+thp_fault_fallback 0
+thp_fault_fallback_charge 0
+thp_collapse_alloc 1
+thp_collapse_alloc_failed 0
+thp_file_alloc 0
+thp_file_fallback 0
+thp_file_fallback_charge 0
+thp_file_mapped 0
+thp_split_page 0
+thp_split_page_failed 0
+thp_deferred_split_page 0
+thp_split_pmd 0
+thp_split_pud 0
+thp_zero_page_alloc 0
+thp_zero_page_alloc_failed 0
+thp_swpout 0
+thp_swpout_fallback 0
+balloon_inflate 0
+balloon_deflate 0
+balloon_migrate 0
+swap_ra 0
+swap_ra_hit 0
+nr_unstable 0\
+"		> "$FAKE_VMSTAT_FILE" && \
+		box_content "created ${ylw}/proc/.vmstat${DEF}" 21
+	else
+		box_content "${mgn}/proc/.vmstat already exists${DEF}" 28
+	fi
+	box_bottom
+}
+
+patch() {
+	box_title "Distro info"
+	# there is no os-release on busybox rootfs
+	OS_RELEASE_FILE=$BASE_DIR/rootfs/etc/os-release
+	if [ -f "$OS_RELEASE_FILE" ]; then
+		OS_ID=$(cat "$OS_RELEASE_FILE"|grep '^ID='|cut -d= -f2)
+		OS_VERSION_ID=$(cat "$OS_RELEASE_FILE" |grep '^VERSION_ID='|cut -d= -f2)
+
+		OS_ID_STR='OS_ID: '
+		OS_VERSION_ID_STR='OS_VERSION_ID: '
+		
+		# box_line
+		box_content "${OS_ID_STR}${ylw}$OS_ID${DEF}" $((${#OS_ID_STR} + ${#OS_ID}))
+		box_content "${OS_VERSION_ID_STR}${ylw}$OS_VERSION_ID${DEF}"  $(( ${#OS_VERSION_ID_STR} + ${#OS_VERSION_ID} ))
+	else
+		box_content "${mgn}/etc/os-release not found${DEF}" 25
+	fi
+	box_bottom
+
+	setup_nameserver
+
+	#setup_profile
+	box_title "Setup profile"
+	
+	add_locale_to_profile
+	add_ps_to_profile
+	add_cls_to_profile
+	box_bottom
+
+	# == Setup fake proc for some distros ==
+	setup_fake_proc
+	# ========
+
+	box_title "Extra"
+	case $OS_ID in
+	ubuntu)
+		HUSH_LOGIN_FILE=$BASE_DIR/rootfs/root/.hushlogin
+		if [ ! -f "$HUSH_LOGIN_FILE" ]; then
+			touch "$HUSH_LOGIN_FILE" && \
+			box_content "created ${ylw}~/.hushlogin${DEF} for ubuntu" 31
+		else 
+			box_content "${mgn}~/.hushlogin already exists${DEF}" 27
+		fi
+		;;
+	*)  ;;
+	esac
+	box_bottom
+
+	# add_termsh_to_bin
+}
+
+generate_start_script() {
+	STARTER_SCRIPT=${1:-${BASE_DIR}/start}
+	echo '#!/system/bin/sh
+
+is_anotherterm() {
+	[ -n "${APP_ID}" ] && (echo "${APP_ID}"| grep -q 'anotherterm')
+}
+
+is_termux() {
+	[ -n "${TERMUX_VERSION}" ]
+}
+
+validate_proot() {
+	[ -f "$PROOT_BIN_PATH" ] && [ -x "$PROOT_BIN_PATH" ]
+}
+
+validate_anotherterm_essentials_plugin(){
+	"$TERMSH" plugin -h green_green_avk.anothertermshellplugin_android10essentials >/dev/null 2>&1
+}' > "$STARTER_SCRIPT"
+
+	echo "# check if anotherterm_essentials_plugin libproot.so is available
+LIBPROOT_PATH=\"$LIBPROOT_PATH\"
+validate_essentials_libproot(){
+	[ -x \"\$LIBPROOT_PATH\" ]
+}\
+" >> "$STARTER_SCRIPT"
+
+	echo '# BASE_DIR is parent dir where rootfs dir locate at
+BASE_DIR="$(realpath $(dirname $0))"
+
+# == Find proot binary path ==
+PROOT_BIN_PATH=""
+! validate_proot && is_anotherterm && validate_anotherterm_essentials_plugin && PROOT_BIN_PATH="$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials proot)"
+! validate_proot && ! is_anotherterm && validate_essentials_libproot && PROOT_BIN_PATH="$LIBPROOT_PATH"
+! validate_proot && PROOT_BIN_PATH="$(command -v proot)"
+! validate_proot && PROOT_BIN_PATH="$BASE_DIR/proot"
+! validate_proot && echo "ERROR: PROOT_NOT_FOUND" && exit 1
+# ========
+
+if is_anotherterm; then
+	[ ! -n USER_ID ] && USER_ID="$(id -u)"
+	export TERMSH_UID="$USER_ID" # "$(id -u)" does not work for old Androids.
+fi
+
+export PROOT_TMP_DIR="${BASE_DIR}/tmp"
+mkdir -p "$PROOT_TMP_DIR"
+
+# == Enhanced link2symlink log ==
+PROOT_L2S_DIR="${BASE_DIR}/rootfs/.proot.meta"
+mkdir -p "$PROOT_L2S_DIR"
+
+if [ -d "$PROOT_L2S_DIR" ]; then
+	export PROOT_L2S_DIR
+fi
+# ========
+
+# == Unset env ==
+unset TMPDIR
+unset LD_LIBRARY_PATH
+unset ENV
+
+# unset LD_PRELOAD in case termux-exec is installed
+is_termux && unset LD_PRELOAD
+# ========
+
+# ==== Proot ====
+# Termux sh does not recognize string +=, use =${var} instead
+
+# Define container home
+CONTAINER_HOME="/root"
+
+command="$PROOT_BIN_PATH"
+
+# To emulate other architecture
+# QEMU_BIN_PATH="$(command -v qemu-x86_64)"
+# if [ -x $QEMU_BIN_PATH ]; then
+# 	command=${command}" --qemu=$QEMU_BIN_PATH"
+# 	else
+# 	printf "ERROR: QEMU NOT FOUND"
+# fi
+
+# Some devices have old kernels and GNU libc refuses to work on them.
+# Fix this behavior by reporting a fake up-to-date kernel version.
+# command=${command}" --kernel-release=5.4.0-faked"
+
+# = Handles System V IPC syscalls (shmget, semget, msgget, etc.)
+# command=${command}" --sysvipc"
+
+command=${command}" --link2symlink"
+command=${command}" --kill-on-exit"
+
+# = Modify bindings to protected ports to use a higher port number.
+command=${command}" -p"
+
+# = Fix lstat to prevent dpkg symlink size warnings
+command=${command}" -L"
+
+# = Hide files and directories starting with ".proot." .
+command=${command}" -H"
+
+command=${command}" -S $BASE_DIR/rootfs"
+command=${command}" --cwd=$CONTAINER_HOME"
+[ -d /vender ] && command=${command}" --bind=/vender"
+
+# == Bind fake proc ==
+if ls ${BASE_DIR}/rootfs/proc/.* > /dev/null 2>&1; then
+	for i in $(cd ${BASE_DIR}/rootfs/proc && ls -1 .*); do
+		command=${command}" --bind=${BASE_DIR}/rootfs/proc/${i}:/proc/${i/.}"
+	done
+fi
+# ========
+
+# == Bind /tmp to /dev/shm. ==
+if [ ! -d "${BASE_DIR}/rootfs/tmp" ]; then
+	mkdir -p "${BASE_DIR}/rootfs/tmp"
+fi
+command=${command}" --bind=${BASE_DIR}/rootfs/tmp:/dev/shm"
+# ========
+
+# == Bind external storage ==
+# OS versions are different, some directories may be unavailable
+# and we need to try them all.
+if ls -1 /storage/emulated/0/ > /dev/null 2>&1; then
+	command=${command}" --bind=/storage/emulated/0:/sdcard"
+elif ls -1 /storage/self/primary/ > /dev/null 2>&1; then
+	command=${command}" --bind=/storage/self/primary:/sdcard"
+elif ls -1 /sdcard/ > /dev/null 2>&1; then
+	command=${command}" --bind=/sdcard:/sdcard"
+else
+	# No access to shared storage.
+	:
+fi
+# ========
+
+# == Bind home dir ==
+# is_anotherterm && command=${command}" --bind=$DATA_DIR:/_root"
+# is_anotherterm && command=${command}" --bind=$DATA_DIR:$CONTAINER_HOME"
+# is_anotherterm && command=${command}" --bind=$DATA_DIR"
+# ========
+
+# == Command termsh for anotherterm ==
+[ -d /apex ] && command=${command}" --bind=/apex"
+command=${command}" --bind=/system"
+is_anotherterm && command=${command}" --bind=$LIB_DIR/libtermsh.so"
+is_anotherterm && command=${command}" --bind=$LIB_DIR/libtermsh.so:/bin/termsh"
+# ========
+
+# == Bind .hushlogin for ubuntu in case HOME dir changes ==
+HUSH_LOGIN_FILE="${BASE_DIR}/rootfs/root/.hushlogin"
+[ -f "$HUSH_LOGIN_FILE" ] && command=${command}" --bind=$HUSH_LOGIN_FILE:$CONTAINER_HOME/.hushlogin"
+# ========
+
+# == Define shell ==
+SHELL="/bin/bash"
+FB_SHELL="/bin/sh"
+if [ ! -x "${BASE_DIR}/rootfs/$SHELL" ]; then SHELL="$FB_SHELL"; fi
+# ========
+
+# == Setup defatul env and start shell ==
+command=${command}" /usr/bin/env"
+command=${command}" HOME="$CONTAINER_HOME""
+command=${command}" LANG=C.UTF-8"
+command=${command}" PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin""
+command=${command}" TERM=$TERM"
+command=${command}" TMPDIR=/tmp"
+command=${command}" $SHELL -l"
+# ========
+
+com="$@"
+
+if [ -z "$1" ]; then
+	exec $command
+else
+	$command -c "$com"
+fi
+# ================
+'	>> "$STARTER_SCRIPT" && \
+	chmod +x "$STARTER_SCRIPT" && \
+	printf "${cyn}created startup script ${ylw}$STARTER_SCRIPT${DEF}\n"
+}
+
+remove_tarball() {
+	 printf "${cyn}Removing image for some space.${DEF}\n"
+	 rm "$TARBALL"
+}
+
+termux_fix_shebang() {
+	# Fix shebang #!/system/bin/sh -> #!/data/data/com.termux/files/usr/bin/sh
+	if is_termux; then
+		printf "${cyn}Fixing shebang of $STARTER_SCRIPT.${DEF}\n"
+		termux-fix-shebang "$STARTER_SCRIPT"
+	fi
+}
+
+final() {
+	# termux_fix_shebang   
+	# remove_tarball
+	
+	if is_termux; then
+		printf "${cyn}You can now run ${ylw}./${STARTER_SCRIPT} ${cyn}to launch proot container.${DEF}\n"
+	elif [ "$TAR_DECOMPRESS_TOOL_PATH" = "$LIBMINITAR_PATH" ]; then
+		printf "${cyn}You can now run ${ylw}sh ./${STARTER_SCRIPT} ${cyn}to launch proot container.${DEF}\n"
+	else
+		printf "${cyn}You can now run ${ylw}./${STARTER_SCRIPT} ${cyn}to launch proot container.${DEF}\n"
+	fi
+}
+
+install_container() {
+	TARBALL=$(realpath "$1")
+	BASE_DIR="$2"
+
+	validate_tarball_file "$TARBALL"
+	decompress_rootfs
+	patch
+	generate_start_script
+	final
+}
+
+update_this_tool() {
+	cd "$BIN_DIR"
+	URL="https://raw.githubusercontent.com/zongou/proot-tool/main/bin/proot-tool"
+	PROOT_INSTALL_FILE="$(basename "$0")"
+	DOWNLOADED_TMP_FILE="${PROOT_INSTALL}.downloaded_tmp"
+	command -v "wget" >/dev/null 2>&1 && DOWNLOAD_TOOL=wget
+	command -v "curl" >/dev/null 2>&1 && DOWNLOAD_TOOL=curl
+	if [ -n "$DOWNLOAD_TOOL" ]; then
+		$DOWNLOAD_TOOL $URL -O "$DOWNLOADED_TMP_FILE"
+		if [ -f "$DOWNLOADED_TMP_FILE" ]; then
+			chmod +x "$DOWNLOADED_TMP_FILE" && \
+			mv -f "$DOWNLOADED_TMP_FILE" "$PROOT_INSTALL_FILE" && \
+			printf "${ylw}latest proot-install has updated to the latest.${DEF}\n" && \
+			exit 0
+		 else
+		    	exit 1
+		 fi
+	else
+		printf "${red}ERROR: NEITHER WGET NOR CURL IS FOUND${DEF}/n"
+		exit 1
+	fi
+}
+
+# Fix proot link2symlink
+# https://github.com/green-green-avk/AnotherTerm-scripts/blob/master/utils/fix-proot-rootfs.sh
+fix_l2s(){
+	set -e
+
+	OP='.l2s.'
+	P='.proot'
+
+	prepend() {
+		echo "$(dirname "$1")/$P$(basename "$1")"
+	}
+
+	relink() {
+		if [ -L "$1" ]; then
+			local LINK="$(readlink "$1")"
+			if (echo "$(basename "$LINK")"|grep -q "${OP}*"); then
+				SYMLINK_SELF_PATH="$(realpath "$(dirname "$1")")"/"$(basename "$1")"
+				SYMLINK_SELF_PATH_HEAD=${SYMLINK_SELF_PATH%%rootfs*}
+
+				SYMLINK_POINTED_PATH=$(readlink $1)
+				SYMLINK_POINTED_PATH_HEAD=${SYMLINK_POINTED_PATH%%rootfs*}
+
+				CORRECTED_PATH=${SYMLINK_POINTED_PATH/$SYMLINK_POINTED_PATH_HEAD/$SYMLINK_SELF_PATH_HEAD}
+				# echo "CORRECTED PATH: [${CORRECTED_PATH}]"
+				if [[ "$SYMLINK_POINTED_PATH" != "$CORRECTED_PATH" ]]; then
+					C_TURQUOISE2="\033[38;5;45m"
+					printf "Relinking:${C_TURQUOISE2} $1 ${DEF}-> ${ylw}${CORRECTED_PATH}${DEF}\n"
+					ln -snf "$CORRECTED_PATH" "$1"
+				fi
+			fi
+		fi
+	}
+
+	# For anotherterm built proot
+	# https://github.com/green-green-avk/proot
+	# prefix .l2s. => .proot.l2s. for non-UserLAnd builds.
+	rename(){
+		if (echo "$(basename "$LINK")"|grep -q "${P}.${OP}*"); then
+			if [[ "$(basename "$1")" != "$P"."$OP"*  ]]; then
+			printf "Renaming:${ylw} $1 ${DEF}-> "${ylw}$(prepend "$1")"${DEF}\n"
+			mv -f "$1" "$(prepend "$1")"
+			fi
+		fi
+	}
+
+	# find "${1:-.}" \( -name "$OP"\* -or -type l \) -print | while RESULT = read RESULT
+	# do
+		# [ -f "$RESULT" ] && rename "$RESULT" &
+		# [ -L "$RESULT" ] && relink "$RESULT" &
+	# done
+	for RESULT in $(find "${1:-.}" \( -name "$OP"\* -or -type l \) -print );
+	do 
+		[ -L "$RESULT" ] && relink "$RESULT" &
+		# [ -f "$RESULT" ] && rename "$RESULT" &
+	done
+	wait
+
+	echo Done
+}
+
+# Validate if essential lib is available except for anothermterm
+validate_essentials_lib(){
+	[  -x "$1/libproot.so" ] && [ -x "$1/libproot.so" ]
+}
+
+validate_essentials_lib_error_exit(){
+	if ! (validate_essentials_lib "$1"); then
+		printf "${red}ERROR: ESSENTIALS LIB DIR [$1] INVALID${DEF}\n"
+		exit 1
+	fi
+}
+
+setup_essentials_lib(){
+	[ -n "$1" ] && ESSENTTIALS_LIB_DIR="$1" || exit 1
+	LIBPROOT_PATH="$ESSENTTIALS_LIB_DIR/libproot.so"
+	LIBMINITAR_PATH="$ESSENTTIALS_LIB_DIR/libminitar.so"
+}
+
+cmd_option() {
+	if [ $# -eq 0 ]; then
+		show_help
+	fi
+	
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--help)
+				shift
+				show_help
+				exit 0
+				;;
+			--install)
+				shift
+				if [ $# -gt 1 ]; then
+						B_OPTION_INSTALL=true
+						OPTION_INSTALL_TARBALL_VALUE=$1
+						OPTION_INSTALL_DEST_DIR_VALUE=$2
+						shift 2
+				else
+					printf "${red}ERROR: OPTION --install REQURES 2 POSITIONAL ARGS TO INSTALL${DEF}\n"
+					exit 1
+				fi
+				;;
+			--lib-uid)
+				shift
+				B_OPTION_LIB_UID=true
+				OPTION_LIB_UID_VALUE="$1"
+				shift
+				;;
+			--gen-start)
+				shift
+				if [ $# -gt 0 ]; then
+					if [ -d "$1" ]; then
+						# Remove extra slash
+						if [ "${1:$((${#1}-1))}" = "/" ]; then
+							OPTION_GEN_START_VALUE="${1:0:$((${#1}-1))}/start"
+						else
+							OPTION_GEN_START_VALUE="${1}/start"
+						fi
+					else
+						OPTION_GEN_START_VALUE="$1"
+					fi
+					shift
+				else
+					OPTION_GEN_START_VALUE="./start"
+				fi
+				generate_start_script "$OPTION_GEN_START_VALUE"
+				;;
+			--update)
+				shift
+				update_this_tool && exit 0 || exit 1
+				;;
+			--fix-l2s)
+				shift
+				fix_l2s "$1" && exit 0|| exit 1
+				;;
+			*)
+				printf "${red}ERROR: OPTION NOT VALID\n${DEF}"
+				exit 1
+				;;
+		esac
+	done
+
+	handle_lib_dir(){
+		if [ -n "$1" ]; then
+			UID_PART="${1}=="
+		else
+			UID_PART='1'
+		fi
+		
+		lib_prefix='/data/app/green_green_avk.anothertermshellplugin_android10essentials-'
+
+		# Get architecture
+		ARCH=$(getprop 'ro.product.cpu.abi')
+		
+		case $ARCH in
+			arm64-v8a|aarch64) ARCH=arm64 ;;
+			armeabi-v7a|armeabi) ARCH=arm ;;
+			x86_64) ARCH=x86_64 ;;
+			x86) ARCH=x86 ;;
+			*) printf "${red}ERROR: Unsupported architecture ${ARCH}${DEF}\n"; exit ;;
+		esac
+		
+		conbined_lib_dir=${lib_prefix}${UID_PART}"/lib/"${ARCH}
+
+		echo $conbined_lib_dir
+	}
+
+	# Setup ESSENTTIALS_LIB_DIR if installing on android api >= 29
+	if [ "$B_OPTION_LIB_UID" = "true" ]; then
+		LIB_DIR=$(handle_lib_dir "$OPTION_LIB_UID_VALUE")
+		validate_essentials_lib_error_exit "$LIB_DIR" && setup_essentials_lib "$LIB_DIR"
+	elif [ -n "$LIB_UID" ]; then
+		LIB_DIR=$(handle_lib_dir "$LIB_UID")
+		validate_essentials_lib_error_exit "$LIB_DIR" && setup_essentials_lib "$LIB_DIR"
+	elif [ -n "$CUSTOM_LIB_UID" ]; then
+		LIB_DIR=$(handle_lib_dir "$CUSTOM_LIB_UID")
+		setup_essentials_lib "$LIB_DIR"
+	fi
+
+	# Start installing container
+	if [ "$B_OPTION_INSTALL" = "true" ]; then
+		install_container "$OPTION_INSTALL_TARBALL_VALUE" "$OPTION_INSTALL_DEST_DIR_VALUE" && exit || exit 1
+	fi
+}
+
+CUSTOM_LIB_UID=
+BIN_DIR=$(realpath "$(dirname "$0")")
+cmd_option "$@"

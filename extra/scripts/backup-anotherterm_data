@@ -1,0 +1,29 @@
+#!/system/bin/sh
+
+cyn='\033[96m';ylw='\033[93m';DEF='\033[0m';
+
+BIN_DIR=$(realpath $(dirname $0))
+
+DATA_DIR_NAME="anotherterm_cfg"
+
+if [ $# -gt 1 ]; then
+    echo Too many args && exit 1
+elif [ $# = 1 ]; then
+    TARBALL_NAME="$1"
+elif [ $# = 0 ]; then
+    export TZ=UTC-8
+    TARBALL_NAME="${DATA_DIR_NAME}_backup_$(date +"%Y%m%d-%H").tgz"
+fi
+
+printf "${cyn}archive name:${ylw} ${TARBALL_NAME}${DEF}\n"
+
+TARBALL_RELATIVE_PATH="/sdcard/${TARBALL_NAME}"
+printf "${cyn}save to: ${ylw}${TARBALL_RELATIVE_PATH}${DEF}\n"
+
+(cd $DATA_DIR && tar -czf ${TARBALL_RELATIVE_PATH} \
+console-font \
+rootfs \
+shared_prefs \
+.sh.rc \
+)
+printf "${cyn}archive size: ${ylw}$(ls -lh ${TARBALL_RELATIVE_PATH}| awk '{print $5}')${DEF}\n"

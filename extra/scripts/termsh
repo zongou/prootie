@@ -1,0 +1,63 @@
+is_anotherterm() {
+	[ -n "${APP_ID}" ] && [ $(echo $APP_ID|grep "anotherterm") ]
+}
+
+# Check if anotermterm essentail plugin available
+validate_anotherterm_essentials(){
+	"$TERMSH" plugin -h green_green_avk.anothertermshellplugin_android10essentials >/dev/null 2>&1
+}
+
+# check if anotherterm_essentials_plugin libminitar.so is available
+ANOTHERTERM_LIBMINITAR_PATH="/data/app/green_green_avk.anothertermshellplugin_android10essentials-e7AQtL72ErptOc9lBxzYZA==/lib/arm64/libminitar.so"
+validate_anotherterm_libminitar(){
+	[ -x "$ANOTHERTERM_LIBMINITAR_PATH" ]
+}
+
+# check if anotherterm_essentials_plugin libproot.so is available
+ANOTHERTERM_LIBPROOT_PATH="/data/app/green_green_avk.anothertermshellplugin_android10essentials-e7AQtL72ErptOc9lBxzYZA==/lib/arm64/libproot.so"
+validate_anotherterm_libproot(){
+	[ -x "$ANOTHERTERM_LIBPROOT_PATH" ]
+}
+
+unset LD_PRELOAD
+unset LD_LIBRARY_PATH
+
+if is_anotherterm; then 
+    if validate_anotherterm_essentials; then
+	    case "$1" in
+		    minitar)
+			    shift
+			    $("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials minitar) "$@"
+			    ;;
+		    proot)
+			    shift
+			    $("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials proot) "$@"
+			    ;;
+		    *) 
+			    "$TERMSH" "$@"
+			    ;;
+	    esac
+    else
+	    "$TERMSH" "$@"
+    fi
+else
+	if validate_anotherterm_libminitar && validate_anotherterm_libminitar; then
+		case "$1" in
+		minitar)
+			shift
+			"$ANOTHERTERM_LIBMINITAR_PATH" "$@"
+			echo "$ANOTHERTERM_LIBMINITAR_PATH" "$@"
+			;;
+		proot)
+			shift
+			"$ANOTHERTERM_LIBPROOT_PATH" "$@"
+			echo "$ANOTHERTERM_LIBPROOT_PATH" "$@"
+			;;
+		*) 
+			printf "\033[91mERROR: COMMAND NOT FOUND\033[0m\n"
+			;;
+		esac
+	else
+		printf "\033[91mERROR: Another Term Shell Plugin - Android 10 Essentials NOT INSTALLED\033[0m\n"
+	fi
+fi

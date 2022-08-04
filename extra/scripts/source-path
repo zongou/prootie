@@ -1,0 +1,7 @@
+#!/system/bin/sh
+
+BIN_DIR="$(realpath $(dirname $0))"
+
+export PATH=$PATH:${BIN_DIR}:$({ S=${BIN_DIR}/.busybox; [ -d $S ] && echo $S; })
+
+busybox >/dev/null && echo busybox available
