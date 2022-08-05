@@ -27,7 +27,7 @@
 
 ### Install proot container on Android 10 (API 29) and higher.
 Install this App [AnotherTermShellPlugin-Android10Essentials](https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials)  
-<details markdown='1'><summary>Define uid if exists in lib app source dir</summary>  
+<details markdown='1'><summary>Define uid if exists in the essentials lib app source dir</summary>  
 
 <li> We can get essentials lib app source dir via adb  
 	
