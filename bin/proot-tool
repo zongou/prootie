@@ -171,7 +171,7 @@ ${BLD}${wht}Examples:${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine --lib-uid=aabbccddeeffgghhiijjkk${DEF}
 
-${BLD}${wht}Note: ${cyn}Install on Android API >= 29.${DEF}
+${BLD}${wht}Note: ${cyn}Install on Android 10 (API >= 29).${DEF}
 ${BLD}${cyn}1. We need to install this apk to provide minitar and proot library${DEF}
 ${cyn}https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials${DEF}
 
@@ -179,7 +179,7 @@ ${BLD}${cyn}2. We need to set lib uid of this application if exists${DEF}
 ${cyn}
 
 # Application Sandbox https://source.android.google.cn/security/app-sandbox
-On Android Version >= 9, there is uid and the it changes every time you reinstall this application, for example: 
+On Android 9 and higher (API >=28), there is uid and the it changes every time you reinstall this application, for example: 
     /data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk
 
 To get lib uid:
