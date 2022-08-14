@@ -1116,26 +1116,26 @@ grant_access_permission(){
 
 clone_container(){
 	printf "${cyn}Cloning $1 to $2${DEF}\n"
-	grant_access_permission "$1"
-	cp -r "$1" "$2"
-	fix_l2s "$2"
+	grant_access_permission "$1" \
+	&& cp -r "$1" "$2" \
+	&& fix_l2s "$2"
 }
 
 backup_contaniner(){
-	grant_access_permission "$1"
-	tar -cf "$2" "$1"
+	grant_access_permission "$1" \
+	&& tar -cf "$2" "$1"
 }
 
 cmd_option() {
 	if [ $# -gt 0 ]; then
 		case "$1" in
 			-h|--help|help)	shift; show_help "$@"; exit 0;;
-			cp|clone)		shift; clone_container "$1" "$2" && exit 0|exit 1;;
-			backup)			shift; backup_contaniner "$1" "$2" && exit 0|exit 1;;
-			install)		shift; install_container "$@"; exit;;
-			gen-start)		shift; generate_start_script "$@";;
+			cp|clone)		shift; clone_container "$1" "$2" && exit 0 || exit 1;;
+			backup)			shift; backup_contaniner "$@" && exit 0 ||exit 1;;
+			install)		shift; install_container "$@" && exit 0 || exit 1;;
+			gen-start)		shift; generate_start_script "$@" && exit 0 || exit 1;;
 			update)			shift; update_this_tool && exit 0 || exit 1;;
-			fix-l2s)		shift; fix_l2s "$1" && exit 0|| exit 1;;
+			fix-l2s)		shift; fix_l2s "$1" && exit 0 || exit 1;;
 			*)				printf "${red}Run '${GREEN}${PROGRAM_NAME} help${CYAN}' to see the list of available commands.${DEF}\n"; exit 1;;
 		esac
 	else
