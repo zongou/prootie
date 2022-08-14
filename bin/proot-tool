@@ -182,7 +182,7 @@ $({
 	fi
 })
 ${cyn}Due to Application Sandbox https://source.android.google.cn/security/app-sandbox
-${cyn}On Android 9 and higher (API >=28), there is uid and the it changes every time you reinstall this application, for example: 
+${cyn}On Android 9 and higher (API >=28), there is uid and it changes every time you reinstall this application, for example: 
 ${blu}/data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk${DEF}
 
 ${cyn}To get lib uid:
