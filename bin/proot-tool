@@ -175,28 +175,33 @@ ${BLD}${wht}Note: ${cyn}Install on Android 10 and higher (API >= 29).${DEF}
 ${BLD}${cyn}1. We need to install this apk to provide minitar and proot library${DEF}
 ${cyn}https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials${DEF}
 
-${BLD}${cyn}2. We need to set lib uid on Android 9 and higher${DEF}
+${BLD}${cyn}2. We need to set lib uid on Android 9 and higher${DEF}\
+$({
+	if command -v getprop >/dev/null; then
+		printf "${blu} (Current Android version: $(getprop ro.build.version.release))"
+	fi
+})
 ${cyn}Due to Application Sandbox https://source.android.google.cn/security/app-sandbox
 ${cyn}On Android 9 and higher (API >=28), there is uid and the it changes every time you reinstall this application, for example: 
 ${blu}/data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk${DEF}
 
 ${cyn}To get lib uid:
-    ${cyn}1. On anotherterm, we can get lib uid by runing:
+    ${cyn}1. On anotherterm, by running
     ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}\
 $({
 	if is_anotherterm && validate_anotherterm_essentials_plugin; then
 		printf "\n"
-		printf "    ${blu}Detected essentials plugin on anotherterm."
+		printf "    ${blu}Detected"
 		("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1 >/dev/null) && ({
 			printf " ${blu}LIB_UID=${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}\n"
 			})
 	fi
 })
     
-    ${cyn}2. Get with adb
+    ${cyn}2. Get with adb, by runing
     ${ylw}cmd package path green_green_avk.anothertermshellplugin_android10essentials|cut -d: -f2|cut -d- -f2|cut -d== -f1${DEF}
     
-    ${cyn}3. We can also get it from file explorer application or package manager application such as X-plorer, Solid Explorer...
+    ${cyn}3. Get it from file explorer application or package manager application such as X-plorer, Solid Explorer...
     
 ${cyn}Examples to install with essentials application library
     ${cyn}# Set via option --lib-uid.
