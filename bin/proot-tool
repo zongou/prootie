@@ -179,7 +179,7 @@ ${cyn}https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essenti
 ${BLD}${cyn}2. We need to set lib uid of this application if exists${DEF}
 ${cyn}On Android 7, its application source dir is a static dir (without uid):
     /data/app/green_green_avk.anothertermshellplugin_android10essentials-1/apk
-On Android 10, there is uid and the it changes every time you reinstall lib apk, for example: 
+On Android 10, there is uid and the it changes every time you reinstall this application, for example: 
     /data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk
 
 To get lib uid:
