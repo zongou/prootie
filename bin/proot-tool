@@ -77,8 +77,8 @@ show_help(){
 ${CYN}${BLD}Tool to install Linux under PRoot on Android${DEF}
 
 ${BLD}${wht}Usage:${DEF}
-  ${ylw}${PROGRAM_NAME} <command> [<args...>]${DEF}
-  ${ylw}${PROGRAM_NAME} <option>
+  ${ylw}${PROGRAM_NAME} [command] [<args...>]${DEF}
+  ${ylw}${PROGRAM_NAME} [option]
  
   ${cyn}View command help information
   ${ylw}${PROGRAM_NAME} help [command]${DEF}
