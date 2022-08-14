@@ -187,17 +187,17 @@ To get lib uid:
     ${cyn}# We can get application source dir by running:
     ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk)${DEF}
     ${cyn}# we can get lib uid by runing:
-    ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}
-    $({
-    	if is_anotherterm && validate_anotherterm_essentials_plugin; then
-    		printf "${blu}Notice: detected essentials plugin on anotherterm. print information for convenience${DEF}\n"
-    		printf "${blu}    application source dir: $("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk)${DEF}\n"
-    		("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1 >/dev/null) && ({
-    			printf "    ${blu}LIB_UID=${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}"
-		})
-		
-    	fi
-    })
+    ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}\
+$({
+	if is_anotherterm && validate_anotherterm_essentials_plugin; then
+		printf "\n"
+		printf "    ${blu}Notice: detected essentials plugin on anotherterm. print information for convenience${DEF}\n"
+		printf "    ${blu}application source dir: $("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk)${DEF}"
+		("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1 >/dev/null) && ({
+			printf "    ${blu}LIB_UID=${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}"
+			})
+	fi
+})
     
     ${cyn}2. Get with adb
     ${ylw}cmd package path green_green_avk.anothertermshellplugin_android10essentials | cut -d: -f2${DEF}
