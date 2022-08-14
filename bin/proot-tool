@@ -190,7 +190,7 @@ To get lib uid:
     ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}
     $({
     	if is_anotherterm && validate_anotherterm_essentials_plugin; then
-    		printf "${blu}Notice: detected essentials plugin on anotherterm. print information for you${DEF}\n"
+    		printf "${blu}Notice: detected essentials plugin on anotherterm. print information for convenience${DEF}\n"
     		printf "${blu}    application source dir: $("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk)${DEF}\n"
     		("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1 >/dev/null) && ({
     			printf "    ${blu}LIB_UID=${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}"
