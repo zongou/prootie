@@ -1,18 +1,24 @@
 ## proot-tool help info
 	Tool to install Linux under PRoot on Android
 
-	Usage: proot-tool [options...] [file] [dir]
+	Usage:
+	  proot-tool <command> [<args...>]
+	  proot-tool <option>
 
-	Examples:
-	  proot-tool --install ./distro-rootfs.tar.xz ./distro
+	  View command help information
+	  proot-tool help [command]
+
+	Commands:
+	  help          # Show help message.
+	  backup        # Backup Container.
+	  cp|clone      # Clone Container.
+	  fix-l2s       # Fix proot link2symlink.
+	  gen-start     # Generate startup script only.
+	  install       # Install rootfs container.
+	  update        # Update this tool to latest.
 
 	Options:
-	  --fix-l2s     [dir]           # Fix proot link2symlink.
-	  --gen-start   [<dir>|<file>]  # Generate startup script only.
-	  --install     [archive] [dir] # Install rootfs container.
-	  --lib-uid     [dir]           # Define the uid of essentials lib dir
-	  --help                        # Show help information.
-	  --update                      # Update this tool to latest.
+	  --help|-h     # Same as command "help". 
 ### Download rootfs archives
 - lxc images
 	- [get from linuxcontainer.org](http://images.linuxcontainers.org/images "get from linuxcontainer.org")
@@ -26,36 +32,9 @@
 - [ustc repogen](https://mirrors.ustc.edu.cn/repogen/ "ustc repogen")
 
 ### Install proot container on Android 10 (API 29) and higher.
-Install this App [AnotherTermShellPlugin-Android10Essentials](https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials)  
-<details markdown='1'><summary>Define uid if exists in the essentials lib app source dir</summary>  
-
-<li> We can get essentials lib app source dir via adb  
-	
-```adb shell
-cmd package path green_green_avk.anothertermshellplugin_android10essentials | cut -d: -f2
-```
-</li>
-<li> We can also get it with file explorer application such as X-plorer, Solid Explorer...  </li>  
-</br>  
-
-On Android 7, it is a static dir: ```/data/app/green_green_avk.anothertermshellplugin_android10essentials-1/apk```  
-On Android 10, its a dir with uid and the uid changes every time you reinstall lib apk, for example: ```/data/app/green_green_avk.anothertermshellplugin_android10essentials-e7AQtL72ErptOc9lBxzYZA==/apk```  
-
-If there is uid, we can can pass it in 3 ways
-1. Pass it via script option when you run this script (--lib-uid).
-2. Define and Get it from env (LIB_UID).
-3. Directy define uid in this script (CUSTOM_LIB_UID).
-	
-If more than one of the ways is used at the same time, priority: 1 > 2 > 3
-
-</details>  
-
-Examples to install linux distro with essentials lib  
-```sh
-export LIB_UID='e7AQtL72ErptOc9lBxzYZA'
-sh ./proot-tool --install ./distro-rootfs.tar.xz distro
-# Or
-sh ./proot-tool --install ./distro-rootfs.tar.xz distro --lib-uid 'e7AQtL72ErptOc9lBxzYZA'
+run this command to get help information
+```shell
+proot-tool help install
 ```
 
 ### Relavent Links
