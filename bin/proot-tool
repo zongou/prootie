@@ -171,8 +171,7 @@ ${BLD}${wht}Examples:${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine --lib-uid=aabbccddeeffgghhiijjkk${DEF}
 
-${BLD}${wht}Note:${DEF}
-${BLD}${cyn}Install proot container on Android 10 (API 29) and higher.${DEF}
+${BLD}${wht}Note: ${cyn}Install proot container on Android 10 (API 29) and higher.${DEF}
 ${BLD}${cyn}1. We need to install this apk to provide minitar and proot library${DEF}
 ${cyn}https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials${DEF}
 
