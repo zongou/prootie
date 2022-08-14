@@ -961,9 +961,11 @@ install_container() {
 			BASE_DIR=${arg_array[1]}
 		else
 			printf "${red}ERROR: Command install requres 2 positional args to install${DEF}\n"
+			exit 1
 		fi
 	else
 		printf "${red}ERROR: Command install requres 2 positional args to install${DEF}\n"
+		exit 1
 	fi
 	
 	# echo LIB_UID=$LIB_UID
