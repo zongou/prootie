@@ -29,7 +29,7 @@ CON='\033[?25h' #Cursor On                                                   |
 #----------------------------------------------------------------------------+
 
 # ==== Library to draw box ====
-genstr() {
+gen_str() {
 	i=0
 	str=""
 	while [ "$1" -gt $i ]
@@ -42,7 +42,7 @@ genstr() {
 
 box_title() {
 	num=$(( (BOX_LEN - 2 - 2 - ${#1})/2 ))
-	line=$(genstr $num '─')
+	line=$(gen_str $num '─')
 	oddstr=""
 	[ $((${#1}%2)) -eq 0 ] && oddstr="─"
 	printf "${BOX_MARGIN_LEFT}┌${line} ${1} ${line}${oddstr}┐\n"
@@ -50,44 +50,78 @@ box_title() {
 
 box_content() {
 	CONTENT_REMAIN_LEN=$(( BOX_LEN - CONTENT_MARGIN_LEFT_LEN - 2 ))
-	fill_up_str=$(genstr $(( CONTENT_REMAIN_LEN - $2 )) ' ')
+	fill_up_str=$(gen_str $(( CONTENT_REMAIN_LEN - $2 )) ' ')
 	printf "${BOX_MARGIN_LEFT}│${CONTENT_MARGIN_LEFT}${1}${fill_up_str}│\n"
 }
 
 box_line() {
-	# printf "${BOX_MARGIN_LEFT}$(genstr $(( BOX_LEN - CONTENT_MARGIN_LEFT_LEN - 2 ))) '─')│"
-	printf "${BOX_MARGIN_LEFT}│$(genstr $(( BOX_LEN - 2 )) '─')│\n"
+	# printf "${BOX_MARGIN_LEFT}$(gen_str $(( BOX_LEN - CONTENT_MARGIN_LEFT_LEN - 2 ))) '─')│"
+	printf "${BOX_MARGIN_LEFT}│$(gen_str $(( BOX_LEN - 2 )) '─')│\n"
 }
 
 box_bottom() {
-	printf "${BOX_MARGIN_LEFT}└$(genstr $(( BOX_LEN - 2 )) '─')┘\n"
+	printf "${BOX_MARGIN_LEFT}└$(gen_str $(( BOX_LEN - 2 )) '─')┘\n"
 }
 
 BOX_LEN=45
-BOX_MARGIN_LEFT_LEN=2
+BOX_MARGIN_LEFT_LEN=0
 CONTENT_MARGIN_LEFT_LEN=2
 
-BOX_MARGIN_LEFT=$(genstr $BOX_MARGIN_LEFT_LEN ' ')
-CONTENT_MARGIN_LEFT=$(genstr $CONTENT_MARGIN_LEFT_LEN ' ')
+BOX_MARGIN_LEFT=$(gen_str $BOX_MARGIN_LEFT_LEN ' ')
+CONTENT_MARGIN_LEFT=$(gen_str $CONTENT_MARGIN_LEFT_LEN ' ')
 # ================
 
 show_help(){
-	__this_file_name=$(basename "$0")
 	printf "\
 ${CYN}${BLD}Tool to install Linux under PRoot on Android${DEF}
 
-${BLD}${CYN}Usage:${DEF} ${ylw}${__this_file_name} [options...] [file] [dir]${DEF}
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} <command> [<args...>]${DEF}
+  ${ylw}${PROGRAM_NAME} <option>
+${BLD}${wht}Commands:${DEF}
+  ${ylw}help${DEF}
+  ${cyn}This message.${DEF}
 
-${BLD}${CYN}Examples:${DEF}
-  ${ylw}${__this_file_name} --install ./distro-rootfs.tar.xz ./distro${DEF}
+  ${ylw}backup
+  ${cyn}Backup Container.${DEF}
+  ${cyn}Example: ${ylw}${PROGRAM_NAME} backup distro backup.tar${DEF}
 
-${BLD}${CYN}Options:${DEF}
-  ${ylw}--fix-l2s	[dir]		${cyn}# Fix proot link2symlink.${DEF}
-  ${ylw}--gen-start	[<dir>|<file>]	${cyn}# Generate startup script only.${DEF}
-  ${ylw}--install 	[archive] [dir]	${cyn}# Install rootfs container.${DEF}
-  ${ylw}--lib-uid 	[dir]		${cyn}# Define the uid of essentials lib dir
-  ${ylw}--help			${cyn}# Show help information.${DEF}
-  ${ylw}--update			${cyn}# Update this tool to latest.${DEF}
+  ${ylw}cp|clone
+  ${cyn}Clone Container.${DEF}
+  ${cyn}Example: ${ylw}${PROGRAM_NAME} cp source_distro dest_distro${DEF}
+
+  ${ylw}fix-l2s <dir>${DEF}
+  ${cyn}Fix proot link2symlink.${DEF}
+  ${cyn}Examples: 
+    ${cyn}Fix all dirs in cwd
+    ${ylw}${PROGRAM_NAME} fix-l2s${DEF}
+    ${cyn}Fix a specific distro dir${DEF}
+    ${ylw}${PROGRAM_NAME} fix-l2s distro${DEF}
+
+  ${ylw}gen-start [<dir>|<file>]${DEF}
+  ${cyn}Generate startup script only.${DEF}
+  ${cyn}Examples:${DEF}
+    ${cyn}Generate ./start in cwd${DEF}
+    ${ylw}${PROGRAM_NAME} gen-start${DEF}
+    ${cyn}Generate start script under dir${DEF}
+    ${ylw}${PROGRAM_NAME} gen-start distro${DEF}
+    ${cyn}Generate under dir with custom file name${DEF}
+    ${ylw}${PROGRAM_NAME} gen-start distro/mystart${DEF}
+
+  ${ylw}install <archive> <dir>${DEF}
+  ${cyn}Install rootfs container.${DEF}
+  ${cyn}Example: ${DEF}${ylw}${PROGRAM_NAME} install ./rootfs.tar.xz ./distro${DEF}
+    ${cyn}Set the uid of essentials lib dir
+    ${ylw}--lib-uid <uid>${DEF}
+    ${ylw}--lib-uid=<uid>${DEF}
+    ${cyn}Example: ${ylw}${PROGRAM_NAME} install ./rootfs.tar.xz ./distro --lib-uid=aabbccddeeffgghhiijjkk${DEF}
+    ${BLD}${wht}Note:${DEF} ${cyn}you can also export LIB_UID to set uid${DEF}
+    
+  ${ylw}update${DEF}
+  ${cyn}Update this tool to latest.${DEF}
+  
+${BLD}${wht}Options:${DEF}
+  ${ylw}--help${DEF}		# Same as command \"help\".${DEF} 
 "
 }
 
@@ -135,6 +169,8 @@ validate_anotherterm_essentials_plugin(){
 }
 
 decompress_rootfs() {
+	TARBALL=$(realpath "$1")
+	BASE_DIR=$2
 	# We will use minitar if we can find it,
 	# else we use GUN tar if we can find,much slower,
 	# else we use tar, and reminds use threre might be issues.
@@ -178,7 +214,8 @@ decompress_rootfs() {
 		# Notify user if tar available in PATH is not GNU tar.
 		if ! (tar --version 2>/dev/null|head -n 1|grep -q 'tar (GNU tar)'); then
 			echo
-			printf "${BRED}Warning: tar binary that is available in PATH appears to be not a GNU tar. You may experience issues during installation, backup and restore operations.${RST}\n"
+			printf "${BRED}Warning: tar binary that is available in PATH appears to be not a GNU tar. \
+			You may experience issues during installation, backup and restore operations.${RST}\n"
 			echo
 		fi
 		
@@ -523,6 +560,7 @@ nr_unstable 0\
 }
 
 patch() {
+	BASE_DIR=$1
 	box_title "Distro info"
 	# there is no os-release on busybox rootfs
 	OS_RELEASE_FILE=$BASE_DIR/rootfs/etc/os-release
@@ -574,7 +612,21 @@ patch() {
 }
 
 generate_start_script() {
-	STARTER_SCRIPT=${1:-${BASE_DIR}/start}
+	if [ $# -gt 0 ]; then
+		if [ -d "$1" ]; then
+			# Remove extra slash
+			if [ "${1:$((${#1}-1))}" = "/" ]; then
+				STARTER_SCRIPT="${1:0:$((${#1}-1))}/start"
+			else
+				STARTER_SCRIPT="${1}/start"
+			fi
+		else
+			STARTER_SCRIPT="$1"
+		fi
+	else
+		STARTER_SCRIPT="./start"
+	fi
+	
 	echo '#!/system/bin/sh
 
 is_anotherterm() {
@@ -767,28 +819,81 @@ termux_fix_shebang() {
 	fi
 }
 
-final() {
+final_work() {
 	# termux_fix_shebang   
 	# remove_tarball
 	
 	if is_termux; then
-		printf "${cyn}You can now run ${ylw}./${STARTER_SCRIPT} ${cyn}to launch proot container.${DEF}\n"
+		printf "${cyn}You can now run ${ylw}./${STARTER_SCRIPT} ${cyn}to launch container.${DEF}\n"
 	elif [ "$TAR_DECOMPRESS_TOOL_PATH" = "$LIBMINITAR_PATH" ]; then
-		printf "${cyn}You can now run ${ylw}sh ./${STARTER_SCRIPT} ${cyn}to launch proot container.${DEF}\n"
+		printf "${cyn}You can now run ${ylw}sh ./${STARTER_SCRIPT} ${cyn}to launch container.${DEF}\n"
 	else
-		printf "${cyn}You can now run ${ylw}./${STARTER_SCRIPT} ${cyn}to launch proot container.${DEF}\n"
+		printf "${cyn}You can now run ${ylw}./${STARTER_SCRIPT} ${cyn}to launch container.${DEF}\n"
 	fi
 }
 
 install_container() {
-	TARBALL=$(realpath "$1")
-	BASE_DIR="$2"
+	if [ $# -gt 1 ]; then
+		index=0
+		while [ $# -gt 0 ]; do
+			case $1 in
+				--lib-uid) shift; LIB_UID=$1; shift;;
+				--lib-uid=*) LIB_UID=$(echo $1|cut -d= -f2); shift;;
+				*) arg_array[$index]=$1; index=$((index + 1)); shift;;
+			esac
+		done
+
+		if [ ${#arg_array[@]} -eq 2 ]; then
+			TARBALL=${arg_array[0]}
+			BASE_DIR=${arg_array[1]}
+		else
+			printf "${red}ERROR: Command install requres 2 positional args to install${DEF}\n"
+		fi
+	else
+		printf "${red}ERROR: Command install requres 2 positional args to install${DEF}\n"
+	fi
+	
+	# echo LIB_UID=$LIB_UID
+	# echo TARBALL=$TARBALL
+	# echo BASE_DIR=$BASE_DIR
+	
+	handle_lib_dir(){
+		if [ -n "$1" ]; then
+			UID_PART="${1}=="
+		else
+			UID_PART='1'
+		fi
+		
+		lib_prefix='/data/app/green_green_avk.anothertermshellplugin_android10essentials-'
+
+		# Get essentials lib architecture dir
+		case $(getprop 'ro.product.cpu.abi') in
+			arm64-v8a) ARCH=arm64 ;;
+			armeabi|armeabi-v7a) ARCH=arm ;;
+			x86_64) ARCH=x86_64 ;;
+			x86|i686) ARCH=x86 ;;
+			*) printf "${red}ERROR: Unsupported architecture ${ARCH}${DEF}\n"; exit ;;
+		esac
+		
+		conbined_lib_dir=${lib_prefix}${UID_PART}"/lib/"${ARCH}
+
+		echo $conbined_lib_dir
+	}
+
+	# Setup ESSENTTIALS_LIB_DIR if installing on android api >= 29
+	if [ "$B_OPTION_LIB_UID" = "true" ]; then
+		LIB_DIR=$(handle_lib_dir "$OPTION_LIB_UID_VALUE")
+		validate_essentials_lib_error_exit "$LIB_DIR" && setup_essentials_lib "$LIB_DIR"
+	elif [ -n "$LIB_UID" ]; then
+		LIB_DIR=$(handle_lib_dir "$LIB_UID")
+		validate_essentials_lib_error_exit "$LIB_DIR" && setup_essentials_lib "$LIB_DIR"
+	fi
 
 	validate_tarball_file "$TARBALL"
-	decompress_rootfs
-	patch
-	generate_start_script
-	final
+	decompress_rootfs "$TARBALL" "$BASE_DIR"
+	patch "$BASE_DIR"
+	generate_start_script "$BASE_DIR/start"
+	final_work
 }
 
 update_this_tool() {
@@ -882,6 +987,7 @@ validate_essentials_lib(){
 validate_essentials_lib_error_exit(){
 	if ! (validate_essentials_lib "$1"); then
 		printf "${red}ERROR: ESSENTIALS LIB DIR [$1] INVALID${DEF}\n"
+		printf "$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials minitar|cut -d- -f2|cut -d== -f1)\n"
 		exit 1
 	fi
 }
@@ -892,111 +998,41 @@ setup_essentials_lib(){
 	LIBMINITAR_PATH="$ESSENTTIALS_LIB_DIR/libminitar.so"
 }
 
+grant_access_permission(){
+	find "$1" -type f -perm u= -o -perm u=x 2>&1 |grep -v 'Permission denied'|xargs -I {} chmod +rw {}
+}
+
+clone_container(){
+	printf "${cyn}Cloning $1 to $2${DEF}\n"
+	grant_access_permission "$1"
+	cp -r "$1" "$2"
+	fix_l2s "$2"
+}
+
+backup_contaniner(){
+	grant_access_permission "$1"
+	tar -cf "$2" "$1"
+}
+
 cmd_option() {
-	if [ $# -eq 0 ]; then
-		show_help
-	fi
-	
-	while [ $# -gt 0 ]; do
+	if [ $# -gt 0 ]; then
 		case "$1" in
-			--help)
-				shift
-				show_help
-				exit 0
-				;;
-			--install)
-				shift
-				if [ $# -gt 1 ]; then
-						B_OPTION_INSTALL=true
-						OPTION_INSTALL_TARBALL_VALUE=$1
-						OPTION_INSTALL_DEST_DIR_VALUE=$2
-						shift 2
-				else
-					printf "${red}ERROR: OPTION --install REQURES 2 POSITIONAL ARGS TO INSTALL${DEF}\n"
-					exit 1
-				fi
-				;;
-			--lib-uid)
-				shift
-				B_OPTION_LIB_UID=true
-				OPTION_LIB_UID_VALUE="$1"
-				shift
-				;;
-			--gen-start)
-				shift
-				if [ $# -gt 0 ]; then
-					if [ -d "$1" ]; then
-						# Remove extra slash
-						if [ "${1:$((${#1}-1))}" = "/" ]; then
-							OPTION_GEN_START_VALUE="${1:0:$((${#1}-1))}/start"
-						else
-							OPTION_GEN_START_VALUE="${1}/start"
-						fi
-					else
-						OPTION_GEN_START_VALUE="$1"
-					fi
-					shift
-				else
-					OPTION_GEN_START_VALUE="./start"
-				fi
-				generate_start_script "$OPTION_GEN_START_VALUE"
-				;;
-			--update)
-				shift
-				update_this_tool && exit 0 || exit 1
-				;;
-			--fix-l2s)
-				shift
-				fix_l2s "$1" && exit 0|| exit 1
-				;;
-			*)
-				printf "${red}ERROR: OPTION NOT VALID\n${DEF}"
-				exit 1
-				;;
+			-h|--help|help)	shift; show_help; exit 0;;
+			cp|clone)		shift; clone_container "$1" "$2" && exit 0|exit 1;;
+			backup)			shift; backup_contaniner "$1" "$2" && exit 0|exit 1;;
+			install)		shift; install_container "$@"; exit;;
+			gen-start)		shift; generate_start_script "$@";;
+			update)			shift; update_this_tool && exit 0 || exit 1;;
+			fix-l2s)		shift; fix_l2s "$1" && exit 0|| exit 1;;
+			*)				printf "${red}Run '${GREEN}${PROGRAM_NAME} help${CYAN}' to see the list of available commands.${DEF}\n"; exit 1;;
 		esac
-	done
-
-	handle_lib_dir(){
-		if [ -n "$1" ]; then
-			UID_PART="${1}=="
-		else
-			UID_PART='1'
-		fi
-		
-		lib_prefix='/data/app/green_green_avk.anothertermshellplugin_android10essentials-'
-
-		# Get essentials lib architecture dir
-		case $(getprop 'ro.product.cpu.abi') in
-			arm64-v8a) ARCH=arm64 ;;
-			armeabi|armeabi-v7a) ARCH=arm ;;
-			x86_64) ARCH=x86_64 ;;
-			x86|i686) ARCH=x86 ;;
-			*) printf "${red}ERROR: Unsupported architecture ${ARCH}${DEF}\n"; exit ;;
-		esac
-		
-		conbined_lib_dir=${lib_prefix}${UID_PART}"/lib/"${ARCH}
-
-		echo $conbined_lib_dir
-	}
-
-	# Setup ESSENTTIALS_LIB_DIR if installing on android api >= 29
-	if [ "$B_OPTION_LIB_UID" = "true" ]; then
-		LIB_DIR=$(handle_lib_dir "$OPTION_LIB_UID_VALUE")
-		validate_essentials_lib_error_exit "$LIB_DIR" && setup_essentials_lib "$LIB_DIR"
-	elif [ -n "$LIB_UID" ]; then
-		LIB_DIR=$(handle_lib_dir "$LIB_UID")
-		validate_essentials_lib_error_exit "$LIB_DIR" && setup_essentials_lib "$LIB_DIR"
-	elif [ -n "$CUSTOM_LIB_UID" ]; then
-		LIB_DIR=$(handle_lib_dir "$CUSTOM_LIB_UID")
-		setup_essentials_lib "$LIB_DIR"
-	fi
-
-	# Start installing container
-	if [ "$B_OPTION_INSTALL" = "true" ]; then
-		install_container "$OPTION_INSTALL_TARBALL_VALUE" "$OPTION_INSTALL_DEST_DIR_VALUE" && exit || exit 1
+	else
+		printf "${BRED}ERROR: no command provided.${DEF}\n"
+		show_help
+		exit 1
 	fi
 }
 
-CUSTOM_LIB_UID=
+PROGRAM_NAME=$(basename "$0")
 BIN_DIR=$(realpath "$(dirname "$0")")
 cmd_option "$@"
