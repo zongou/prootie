@@ -171,48 +171,40 @@ ${BLD}${wht}Examples:${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine --lib-uid=aabbccddeeffgghhiijjkk${DEF}
 
-${BLD}${wht}Note: ${cyn}Install on Android 10 (API >= 29).${DEF}
+${BLD}${wht}Note: ${cyn}Install on Android 10 and higher (API >= 29).${DEF}
 ${BLD}${cyn}1. We need to install this apk to provide minitar and proot library${DEF}
 ${cyn}https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials${DEF}
 
-${BLD}${cyn}2. We need to set lib uid of this application if exists${DEF}
-${cyn}
+${BLD}${cyn}2. We need to set lib uid on Android 9 and higher${DEF}
+${cyn}Due to Application Sandbox https://source.android.google.cn/security/app-sandbox
+${cyn}On Android 9 and higher (API >=28), there is uid and the it changes every time you reinstall this application, for example: 
+${blu}/data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk${DEF}
 
-# Application Sandbox https://source.android.google.cn/security/app-sandbox
-On Android 9 and higher (API >=28), there is uid and the it changes every time you reinstall this application, for example: 
-    /data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk
-
-To get lib uid:
-    ${cyn}1. On anotherterm
-    ${cyn}# We can get application source dir by running:
-    ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk)${DEF}
-    ${cyn}# we can get lib uid by runing:
+${cyn}To get lib uid:
+    ${cyn}1. On anotherterm, we can get lib uid by runing:
     ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}\
 $({
 	if is_anotherterm && validate_anotherterm_essentials_plugin; then
 		printf "\n"
-		printf "    ${blu}Notice: detected essentials plugin on anotherterm. print information for convenience${DEF}\n"
-		printf "    ${blu}application source dir: $("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk)${DEF}\n"
+		printf "    ${blu}Detected essentials plugin on anotherterm."
 		("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1 >/dev/null) && ({
-			printf "    ${blu}LIB_UID=${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}\n"
+			printf " ${blu}LIB_UID=${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials apk|cut -d- -f2|cut -d== -f1)${DEF}\n"
 			})
 	fi
 })
     
     ${cyn}2. Get with adb
-    ${ylw}cmd package path green_green_avk.anothertermshellplugin_android10essentials | cut -d: -f2${DEF}
+    ${ylw}cmd package path green_green_avk.anothertermshellplugin_android10essentials|cut -d: -f2|cut -d- -f2|cut -d== -f1${DEF}
     
     ${cyn}3. We can also get it from file explorer application or package manager application such as X-plorer, Solid Explorer...
     
-To set lib uid:
-    1. Set it via command option --lib-uid.
-    2. export env LIB_UID.
-	
-Examples to install linux distro with essentials lib  
-    ${ylw}export LIB_UID=aabbccddeeffgghhiijjkk
-    sh ./proot-tool install ./distro-rootfs.tar.xz distro${DEF}
-    ${cyn}# Or${DEF}
+${cyn}Examples to install with essentials application library
+    ${cyn}# Set via option --lib-uid.
     ${ylw}sh ./proot-tool install ./distro-rootfs.tar.xz distro --lib-uid=aabbccddeeffgghhiijjkk${DEF}
+    
+    ${cyn}# Export LIB_UID env.
+    ${ylw}export LIB_UID=aabbccddeeffgghhiijjkk
+    ${ylw}sh ./proot-tool install ./distro-rootfs.tar.xz distro${DEF}
 "
 	}
 
