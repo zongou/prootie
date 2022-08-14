@@ -72,57 +72,130 @@ CONTENT_MARGIN_LEFT=$(gen_str $CONTENT_MARGIN_LEFT_LEN ' ')
 # ================
 
 show_help(){
-	printf "\
+	general_help(){
+		printf "\
 ${CYN}${BLD}Tool to install Linux under PRoot on Android${DEF}
 
 ${BLD}${wht}Usage:${DEF}
   ${ylw}${PROGRAM_NAME} <command> [<args...>]${DEF}
   ${ylw}${PROGRAM_NAME} <option>
+ 
+  ${cyn}View command help information
+  ${ylw}${PROGRAM_NAME} help [command]${DEF}
+  
 ${BLD}${wht}Commands:${DEF}
-  ${ylw}help${DEF}
-  ${cyn}This message.${DEF}
-
-  ${ylw}backup
-  ${cyn}Backup Container.${DEF}
-  ${cyn}Example: ${ylw}${PROGRAM_NAME} backup distro backup.tar${DEF}
-
-  ${ylw}cp|clone
-  ${cyn}Clone Container.${DEF}
-  ${cyn}Example: ${ylw}${PROGRAM_NAME} cp source_distro dest_distro${DEF}
-
-  ${ylw}fix-l2s <dir>${DEF}
-  ${cyn}Fix proot link2symlink.${DEF}
-  ${cyn}Examples: 
-    ${cyn}Fix all dirs in cwd
-    ${ylw}${PROGRAM_NAME} fix-l2s${DEF}
-    ${cyn}Fix a specific distro dir${DEF}
-    ${ylw}${PROGRAM_NAME} fix-l2s distro${DEF}
-
-  ${ylw}gen-start [<dir>|<file>]${DEF}
-  ${cyn}Generate startup script only.${DEF}
-  ${cyn}Examples:${DEF}
-    ${cyn}Generate ./start in cwd${DEF}
-    ${ylw}${PROGRAM_NAME} gen-start${DEF}
-    ${cyn}Generate start script under dir${DEF}
-    ${ylw}${PROGRAM_NAME} gen-start distro${DEF}
-    ${cyn}Generate under dir with custom file name${DEF}
-    ${ylw}${PROGRAM_NAME} gen-start distro/mystart${DEF}
-
-  ${ylw}install <archive> <dir>${DEF}
-  ${cyn}Install rootfs container.${DEF}
-  ${cyn}Example: ${DEF}${ylw}${PROGRAM_NAME} install ./rootfs.tar.xz ./distro${DEF}
-    ${cyn}Set the uid of essentials lib dir
-    ${ylw}--lib-uid <uid>${DEF}
-    ${ylw}--lib-uid=<uid>${DEF}
-    ${cyn}Example: ${ylw}${PROGRAM_NAME} install ./rootfs.tar.xz ./distro --lib-uid=aabbccddeeffgghhiijjkk${DEF}
-    ${BLD}${wht}Note:${DEF} ${cyn}you can also export LIB_UID to set uid${DEF}
-    
-  ${ylw}update${DEF}
-  ${cyn}Update this tool to latest.${DEF}
+  ${ylw}help 		${cyn}# Show help message.${DEF}
+  ${ylw}backup 	${cyn}# Backup Container.${DEF}
+  ${ylw}cp|clone 	${cyn}# Clone Container.${DEF}
+  ${ylw}fix-l2s	${cyn}# Fix proot link2symlink.${DEF}
+  ${ylw}gen-start	${cyn}# Generate startup script only.${DEF}
+  ${ylw}install	${cyn}# Install rootfs container.${DEF}
+  ${ylw}update 	${cyn}# Update this tool to latest.${DEF}
   
 ${BLD}${wht}Options:${DEF}
-  ${ylw}--help${DEF}		# Same as command \"help\".${DEF} 
+  ${ylw}--help|-h	${cyn}# Same as command \"help\".${DEF} 
 "
+	}
+	
+	backup_help(){
+		printf "\
+${CYN}${BLD}Backup container.${DEF}
+
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} backup [distro] [file]${DEF}
+  
+${BLD}${wht}Examples:${DEF}
+  ${ylw}${PROGRAM_NAME} backup alpine backup.tar${DEF}
+"
+	}
+
+	clone_help(){
+		printf "\
+${CYN}${BLD}Clone container.${DEF}
+
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} cp|clone [source_dir] [dest_dir]${DEF}
+  
+${BLD}${wht}Examples:${DEF}
+  ${ylw}${PROGRAM_NAME} clone alpine tmp${DEF}
+"
+	}
+
+	fix_l2s_help(){
+		printf "\
+${CYN}${BLD}Fix proot link2symlink.${DEF}
+
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} fix-l2s [<empty>|<dir>]${DEF}
+  
+${BLD}${wht}Examples:${DEF}
+  ${cyn}# Try to fix all dirs in current working dir${DEF}
+  ${ylw}proot-tool gen-start${DEF}
+
+  ${cyn}# Try to fix specific distro dir${DEF}
+  ${ylw}${PROGRAM_NAME} fix-l2s alpine${DEF}
+"
+	}
+
+	gen_start_help(){
+		printf "\
+${CYN}${BLD}Generate startup script.${DEF}
+
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} gen-start [<empty>|<file>|<dir>]${DEF}
+  
+${BLD}${wht}Examples:${DEF}
+  ${cyn}# Generate ./start in cwd${DEF}
+  ${ylw}proot-tool gen-start${DEF}
+  
+  ${cyn}# Generate start script under dir${DEF}
+  ${ylw}proot-tool gen-start distro${DEF}
+  
+  ${cyn}# Generate under dir with custom file name${DEF}
+  ${ylw}proot-tool gen-start distro/mystart${DEF}
+"
+	}
+
+	install_help(){
+		printf "\
+${CYN}${BLD}Install container.${DEF}
+
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} install [file] [dir] [option]${DEF}
+
+${BLD}${wht}Options:${DEF}
+  ${ylw}--lib-uid [string]${DEF}	${cyn}# set lib uid${DEF}
+  ${ylw}--lib-uid=[string]${DEF}
+  
+${BLD}${wht}Examples:${DEF}
+  ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine${DEF}
+  ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine --lib-uid=aabbccddeeffgghhiijjkk${DEF}
+"
+	}
+
+	update_help(){
+		printf "\
+${CYN}${BLD}Update this tool.${DEF}
+
+${BLD}${wht}Usage:${DEF}
+  ${ylw}${PROGRAM_NAME} update${DEF}
+"
+	}
+	
+	if [ $# -eq 1 ]; then
+		case "$1" in
+			backup) 	backup_help;;
+			cp|clone) 	clone_help;;
+			fix-l2s)	fix_l2s_help;;
+			gen-start)	gen_start_help;;
+			install)	install_help;;
+			update)		update_help;;
+			*)			general_help;;
+		esac
+	else
+		general_help
+	fi
+	
 }
 
 is_anotherterm() {
@@ -1017,7 +1090,7 @@ backup_contaniner(){
 cmd_option() {
 	if [ $# -gt 0 ]; then
 		case "$1" in
-			-h|--help|help)	shift; show_help; exit 0;;
+			-h|--help|help)	shift; show_help "$@"; exit 0;;
 			cp|clone)		shift; clone_container "$1" "$2" && exit 0|exit 1;;
 			backup)			shift; backup_contaniner "$1" "$2" && exit 0|exit 1;;
 			install)		shift; install_container "$@"; exit;;
