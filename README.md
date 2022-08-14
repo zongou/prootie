@@ -2,8 +2,8 @@
 	Tool to install Linux under PRoot on Android
 
 	Usage:
-	  proot-tool <command> [<args...>]
-	  proot-tool <option>
+	  proot-tool [command] [<args...>]
+	  proot-tool [option]
 
 	  View command help information
 	  proot-tool help [command]
