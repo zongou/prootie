@@ -164,12 +164,48 @@ ${BLD}${wht}Usage:${DEF}
   ${ylw}${PROGRAM_NAME} install [file] [dir] [option]${DEF}
 
 ${BLD}${wht}Options:${DEF}
-  ${ylw}--lib-uid [string]${DEF}	${cyn}# set lib uid${DEF}
+  ${ylw}--lib-uid [string]${DEF}	${cyn}# set lib uid, please read the note
   ${ylw}--lib-uid=[string]${DEF}
   
 ${BLD}${wht}Examples:${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine${DEF}
   ${ylw}${PROGRAM_NAME} install ./alpine-rootfs.tar.xz ./alpine --lib-uid=aabbccddeeffgghhiijjkk${DEF}
+
+${BLD}${wht}Note:${DEF}
+${BLD}Install proot container on Android 10 (API 29) and higher.${DEF}
+${BLD}${cyn}1. We need to install this apk to provide minitar and proot library${DEF}
+${cyn}https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials${DEF}
+
+${BLD}${cyn}2. We need to set lib uid of this application if exists${DEF}
+${cyn}On Android 7, its application source dir is a static dir (without uid):
+    /data/app/green_green_avk.anothertermshellplugin_android10essentials-1/apk
+On Android 10, there is uid and the it changes every time you reinstall lib apk, for example: 
+    /data/app/green_green_avk.anothertermshellplugin_android10essentials-aabbccddeeffgghhiijjkk==/apk
+
+To get lib uid:
+    1. On anotherterm we can get lib uid by runing:
+    ${ylw}echo \$(\"\$TERMSH\" plugin green_green_avk.anothertermshellplugin_android10essentials minitar|cut -d- -f2|cut -d== -f1)${DEF}
+    $({
+    	if is_anotherterm; then
+    		printf "${cyn}Notice: anotherterm env detected, lib uid is "
+    		printf "${BLD}$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials minitar|cut -d- -f2|cut -d== -f1)${DEF}"
+    	fi
+    })
+    
+    ${cyn}2. Get with adb
+    ${ylw}cmd package path green_green_avk.anothertermshellplugin_android10essentials | cut -d: -f2${DEF}
+    
+    ${cyn}3. We can also get it from file explorer application or package manager application such as X-plorer, Solid Explorer...
+    
+To set lib uid:
+    1. Set it via command option --lib-uid.
+    2. export env LIB_UID.
+	
+Examples to install linux distro with essentials lib  
+    ${ylw}export LIB_UID=aabbccddeeffgghhiijjkk
+    sh ./proot-tool install ./distro-rootfs.tar.xz distro${DEF}
+    ${cyn}# Or${DEF}
+    ${ylw}sh ./proot-tool install ./distro-rootfs.tar.xz distro --lib-uid=aabbccddeeffgghhiijjkk${DEF}
 "
 	}
 
@@ -1060,7 +1096,6 @@ validate_essentials_lib(){
 validate_essentials_lib_error_exit(){
 	if ! (validate_essentials_lib "$1"); then
 		printf "${red}ERROR: ESSENTIALS LIB DIR [$1] INVALID${DEF}\n"
-		printf "$("$TERMSH" plugin green_green_avk.anothertermshellplugin_android10essentials minitar|cut -d- -f2|cut -d== -f1)\n"
 		exit 1
 	fi
 }
