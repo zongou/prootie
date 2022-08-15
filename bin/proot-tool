@@ -893,11 +893,7 @@ command=${command}" TMPDIR=/tmp"
 command=${command}" $SHELL -l"
 # ========
 
-if [ -z "$1" ]; then
-	exec $command
-else
-	$command -c "$@"
-fi
+if [ -z "$1" ]; then exec $command; else $command -c "$@"; fi
 # ================
 '	>> "$STARTER_SCRIPT" && \
 	chmod +x "$STARTER_SCRIPT" && \
