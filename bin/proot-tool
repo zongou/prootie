@@ -742,27 +742,14 @@ generate_start_script() {
 	
 	echo '#!/system/bin/sh
 
-is_anotherterm() {
-	[ -n "${APP_ID}" ] && (echo "${APP_ID}"| grep -q 'anotherterm')
-}
-
-is_termux() {
-	[ -n "${TERMUX_VERSION}" ]
-}
-
-validate_proot() {
-	[ -f "$PROOT_BIN_PATH" ] && [ -x "$PROOT_BIN_PATH" ]
-}
-
-validate_anotherterm_essentials_plugin(){
-	"$TERMSH" plugin -h green_green_avk.anothertermshellplugin_android10essentials >/dev/null 2>&1
-}' > "$STARTER_SCRIPT"
+is_anotherterm() { [ -n "${APP_ID}" ] && (echo "${APP_ID}"| grep -q 'anotherterm'); }
+is_termux() { [ -n "${TERMUX_VERSION}" ]; }
+validate_proot() { [ -x "$PROOT_BIN_PATH" ]; }
+validate_anotherterm_essentials_plugin(){ "$TERMSH" plugin -h green_green_avk.anothertermshellplugin_android10essentials >/dev/null 2>&1; }' > "$STARTER_SCRIPT"
 
 	echo "# check if anotherterm_essentials_plugin libproot.so is available
 LIBPROOT_PATH=\"$LIBPROOT_PATH\"
-validate_essentials_libproot(){
-	[ -x \"\$LIBPROOT_PATH\" ]
-}\
+validate_essentials_libproot(){ [ -x \"\$LIBPROOT_PATH\" ]; }\
 " >> "$STARTER_SCRIPT"
 
 	echo '# BASE_DIR is parent dir where rootfs dir locate at
@@ -906,12 +893,10 @@ command=${command}" TMPDIR=/tmp"
 command=${command}" $SHELL -l"
 # ========
 
-com="$@"
-
 if [ -z "$1" ]; then
 	exec $command
 else
-	$command -c "$com"
+	$command -c "$@"
 fi
 # ================
 '	>> "$STARTER_SCRIPT" && \
