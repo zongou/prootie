@@ -102,10 +102,10 @@ ${BLD}${wht}Options:${DEF}
 ${CYN}${BLD}Backup container.${DEF}
 
 ${BLD}${wht}Usage:${DEF}
-  ${ylw}${PROGRAM_NAME} backup [distro] [file]${DEF}
+  ${ylw}${PROGRAM_NAME} backup [file] [distro]${DEF}
   
 ${BLD}${wht}Examples:${DEF}
-  ${ylw}${PROGRAM_NAME} backup alpine backup.tar${DEF}
+  ${ylw}${PROGRAM_NAME} backup backup.tar alpine${DEF}
 "
 	}
 
@@ -1120,8 +1120,8 @@ clone_container(){
 }
 
 backup_contaniner(){
-	grant_access_permission "$1" \
-	&& tar -cf "$2" "$1"
+	grant_access_permission "$2" \
+	&& tar -cf "$1" "$2"
 }
 
 cmd_option() {
