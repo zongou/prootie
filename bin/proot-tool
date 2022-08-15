@@ -742,7 +742,7 @@ generate_start_script() {
 	
 	echo '#!/system/bin/sh
 
-is_anotherterm() { [ -n "${APP_ID}" ] && (echo "${APP_ID}"| grep -q 'anotherterm'); }
+is_anotherterm() { [ -n "${APP_ID}" ] && (echo "${APP_ID}"| grep -q "anotherterm"); }
 is_termux() { [ -n "${TERMUX_VERSION}" ]; }
 validate_proot() { [ -x "$PROOT_BIN_PATH" ]; }
 validate_anotherterm_essentials_plugin(){ "$TERMSH" plugin -h green_green_avk.anothertermshellplugin_android10essentials >/dev/null 2>&1; }' > "$STARTER_SCRIPT"
