@@ -838,7 +838,7 @@ command=${command}" -H"
 
 command=${command}" -S $BASE_DIR/rootfs"
 command=${command}" --cwd=$CONTAINER_HOME"
-[ -d /vender ] && command=${command}" --bind=/vender"
+[ -d /vendor ] && command=${command}" --bind=/vendor"
 
 # == Bind fake proc ==
 if ls ${BASE_DIR}/rootfs/proc/.* > /dev/null 2>&1; then
