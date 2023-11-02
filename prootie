@@ -1,0 +1,1079 @@
+## NO SHEBANG, THIS SCRIPT IS WRITTEN IN POSIX SHELL
+## [Shell Command Language] (https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_07_04)
+set -eu
+
+SCRIPT_NAME="$(basename $0)"
+SCRIPT_PID="$$"
+SCRIPT_ARGS="$*"
+ANDROID10ESSENTIALS_PLUGIN_PACKAGE="green_green_avk.anothertermshellplugin_android10essentials"
+
+## Colorful output
+## shellcheck disable=SC2034
+{
+	CR='\r'
+	LF='\n'
+	DECRC='\0338'
+	EL2='\033[2K'
+	ED='\033[J'
+	COF='\033[?25l' # Cursor Off
+	CON='\033[?25h' # Cursor On
+
+	## Set default color empty
+	for color_var in DEF BLD DIM CUR UND INV RED GRN YLW BLU MGN CYN WHT; do
+		eval ${color_var}=''
+	done
+
+	if test "${TERM+1}"; then
+		case "$TERM" in
+		xterm | xterm-256color)
+			DEF='\033[0m' # Default color and effects
+			BLD='\033[1m' # Bold\brighter
+			DIM='\033[2m' # Dim\darker
+			CUR='\033[3m' # Italic font
+			UND='\033[4m' # Underline
+			INV='\033[7m' # Inverted
+
+			RED='\033[31m'
+			GRN='\033[32m'
+			YLW='\033[33m'
+			BLU='\033[34m'
+			MGN='\033[35m'
+			CYN='\033[36m'
+			WHT='\033[37m'
+			;;
+		esac
+	fi
+}
+
+msg_raw() { if test $# -gt 0; then printf "$*" >&2; elif ! test -t 0; then printf "$(cat)" >&2; fi; }
+msg() { if test $# -gt 0; then printf "$*\n" >&2; elif ! test -t 0; then printf "$(cat)\n" >&2; fi; }
+msg_info() { msg "${DIM}[*]${DEF} ${CYN}${*}${DEF}"; }
+msg_warn() { msg "${YLW}[!]${DEF} ${CYN}${*}${DEF}"; }
+err() { msg "${RED}ERROR${DEF}: $*" && exit 1; }
+err_no_arg() { err "no value provided to argument: [$*]"; }
+err_args_not_handled() { err "argument not handled: $*"; }
+
+test_is_android() { ! test -f /etc/os-release && command -v getprop >/dev/null 2>&1; }
+test_is_termux() { test_is_android && test "${TERMUX_VERSION+1}"; }
+test_is_anotherterm() { test_is_android && test "${TERMSH+1}"; }
+test_anotherterm_android10essentials_plugin() { test_is_anotherterm && "${TERMSH}" plugin -h "${ANDROID10ESSENTIALS_PLUGIN_PACKAGE}" >/dev/null 2>&1; }
+
+get_proot_session_pid() {
+	_TRACER_PID="$(grep 'TracerPid' "/proc/$$/status" | cut -d'	' -f2)"
+	if test "${_TRACER_PID}" -ne 0; then
+		case "$(grep 'Name' "/proc/${_TRACER_PID}/status" | cut -d'	' -f2)" in
+		proot | proot-userland | libproot.so | libproot-userland.so) printf '%s' "${_TRACER_PID}" ;;
+		*) false ;;
+		esac
+	else
+		false
+	fi
+}
+
+## [dir]
+trim_path() {
+	printf '%s' "$1" | sed -r 's|\/+$||'
+}
+
+print_var() {
+	while test $# -gt 0; do
+		eval "msg \"${1}=\$${1}\""
+		shift
+	done
+}
+
+pretty_print() {
+	printf '%s \\\\\n' "$1"
+	shift
+	while test $# -gt 0; do
+		printf '    %s \\\\\n' "$1"
+		shift
+	done
+}
+
+## [ROOTFS_DIR] [config_item]
+get_conf() {
+	case "$2" in
+	script_workspace_dir) echo "$1/.proot" ;;
+	proot_l2s_dir) echo "$(get_conf $(realpath "$1") script_workspace_dir)/meta" ;;
+	proot_fake_rootfs_dir) echo "$(get_conf "$1" script_workspace_dir)/rootfs" ;;
+	proot_sessions_dir) echo "$(get_conf "$1" script_workspace_dir)/sessions" ;;
+	proot_tmp_dir) echo "$(get_conf "$1" proot_sessions_dir)/${SCRIPT_PID}" ;;
+	anotherterm_profile_path) echo "$(get_conf "$1" proot_tmp_dir)/anotherterm.sh" ;;
+	esac
+}
+
+setup_proot_path() {
+	if ! test ${PROOT+1}; then
+		if _val=$(command -v proot >&1); then
+			PROOT="${_val}"
+		elif test_is_anotherterm && test_anotherterm_android10essentials_plugin; then
+			PROOT="$("${TERMSH}" plugin "${ANDROID10ESSENTIALS_PLUGIN_PACKAGE}" proot)"
+		else
+			err "setup_proot_path: Cannot find proot"
+		fi
+	fi
+
+	if script_opt_is_verbose; then
+		msg "PROOT=[${PROOT}]"
+	fi
+}
+
+setup_proot_env() {
+	unset LD_PRELOAD
+	PROOT_TMP_DIR="$(get_conf "$1" proot_tmp_dir)"
+	if ! test -d "${PROOT_TMP_DIR}"; then
+		mkdir -p "${PROOT_TMP_DIR}"
+	fi
+	export PROOT_TMP_DIR
+
+	PROOT_L2S_DIR="$(get_conf "$1" proot_l2s_dir)"
+	if ! test -d "${PROOT_L2S_DIR}"; then
+		mkdir -p "${PROOT_L2S_DIR}"
+	fi
+	export PROOT_L2S_DIR
+
+	if script_opt_is_verbose; then
+		msg "PROOT_TMP_DIR=[${PROOT_TMP_DIR}]"
+		msg "PROOT_L2S_DIR=[${PROOT_L2S_DIR}]"
+	fi
+}
+
+command_install() {
+	_FUNC_NAME='install'
+	_show_help() {
+		msg <<-EOF
+			${BLD}Command ${_FUNC_NAME}${DEF}
+			  ${CUR}Install tar format rootfs archive from stdin.${DEF}
+
+			  Usage:
+			    ${YLW}${SCRIPT_NAME} ${_FUNC_NAME} [OPTION...] [ROOTFS_DIR]${DEF}
+
+			  Options:
+			    ${CYN}-h${DEF}, ${CYN}--help${DEF}\t \tshow this help
+			    ${CYN}-v${DEF}, ${CYN}--verbose${DEF}\ttar -v, --verbose option\n
+		EOF
+	}
+
+	if test $# -gt 0; then
+		while test $# -gt 0; do
+			case "$1" in
+			-h | --help)
+				_show_help
+				exit
+				;;
+			-v | -vv | --verbose)
+				case "$1" in
+				-vv) _opt_tar_verbose_flag="-vv" ;;
+				-v | --verbose)
+					if ! test ${_opt_tar_verbose_flag+1}; then
+						_opt_tar_verbose_flag="-v"
+					else
+						_opt_tar_verbose_flag="-vv"
+					fi
+					;;
+				esac
+				shift
+				;;
+			*)
+				if ! test "${_opt_rootfs_dir+1}"; then
+					_opt_rootfs_dir="$1"
+					shift
+				else
+					err_args_not_handled "$@"
+				fi
+				;;
+			esac
+		done
+	else
+		err_no_arg
+	fi
+
+	if ! test "${_opt_rootfs_dir+1}"; then
+		err "rootfs not set."
+	elif test -d "${_opt_rootfs_dir}"; then
+		err "rootfs dir [${_opt_rootfs_dir}] exists."
+	fi
+
+	if test $# -gt 0; then
+		err_args_not_handled "$@"
+	fi
+
+	if test -t 0; then
+		err "no data from stdin."
+	fi
+
+	setup_proot_path
+	setup_proot_env "${_opt_rootfs_dir}"
+
+	## Trap failure and clean up
+	cleanup() { rm -rf "${_opt_rootfs_dir}"; }
+	err_cleanup() { cleanup && err "Exiting due to failure."; }
+	exit_as_requested_cleanup() { trap - EXIT && cleanup && err "${CR}${EL2}Exiting immediately as requested.${DEF}" && exit 1; }
+	trap "err_cleanup" EXIT
+	trap "exit_as_requested_cleanup" HUP INT TERM
+
+	set -- "$@" "--link2symlink"
+	set -- "$@" "--root-id"
+	set -- "$@" "tar"
+
+	if test "${_opt_tar_verbose_flag+1}"; then
+		set -- "$@" "${_opt_tar_verbose_flag}"
+	fi
+
+	set -- "$@" "-C" "${_opt_rootfs_dir}"
+	set -- "$@" "-x"
+
+	msg_info "Installing rootfs to [${_opt_rootfs_dir}] ..."
+	if script_opt_is_verbose; then
+		msg "proot_install_cmd=[\n$(pretty_print "${PROOT}" "$@")\n]"
+	fi
+
+	"${PROOT}" "$@"
+	rm -rf "$(get_conf "${_opt_rootfs_dir}" proot_tmp_dir)"
+
+	## [--override] [--base64] [path] [content]
+	_add_file() {
+		_FUNC_ARGS="$*"
+		_is_opt_override() { false; }
+
+		while test $# -gt 0; do
+			case "$1" in
+			--override)
+				shift
+				_is_opt_override() { true; }
+				;;
+			*)
+				if ! test ${_FILE_PATH+1}; then
+					_FILE_PATH="$1"
+					shift
+				else
+					err "_add_file: arguments error:[${_FUNC_ARGS}]"
+					shift
+				fi
+				;;
+			esac
+		done
+
+		if _is_opt_override || ! test -s "${_FILE_PATH}"; then
+			mkdir -p "$(dirname "${_FILE_PATH}")"
+
+			cat /dev/fd/0 >"${_FILE_PATH}"
+
+			chmod 644 "${_FILE_PATH}"
+			msg_info "File added: ${_FILE_PATH}"
+		else
+			msg_warn "File not empty: ${_FILE_PATH}"
+		fi
+
+		unset -f _is_opt_override
+		unset _FILE_PATH
+	}
+
+	## /etc/resolv.conf
+	_add_file "${_opt_rootfs_dir}/etc/resolv.conf" <<-EOF
+		nameserver 8.8.8.8
+		nameserver 8.8.4.4
+	EOF
+
+	## /etc/hosts
+	_add_file "${_opt_rootfs_dir}/etc/hosts" <<-EOF
+		127.0.0.1       localhost localhost.localdomain_func
+		::1             localhost localhost.localdomain_func
+	EOF
+
+	## /etc/profile.d/locale.sh
+	_add_file "${_opt_rootfs_dir}/etc/profile.d/locale.sh" <<-EOF
+		export CHARSET=UTF-8
+		export LANG=C.UTF-8
+		export LC_COLLATE=C
+	EOF
+
+	## /etc/profile.d/ps.sh
+	base64 -d <<-EOF | _add_file "${_opt_rootfs_dir}/etc/profile.d/ps.sh"
+		aWYgdGVzdCAiJHtTSEVMTH0iID0gIi9iaW4vYmFzaCI7IHRoZW4KICAgIFBTMT0nXFtcZVszMm1c
+		XVx1XFtcZVszM21cXUBcW1xlWzMybVxdXGhcW1xlWzMzbVxdOlxbXGVbMzJtXF1cd1xbXGVbMzNt
+		XF1cJFxbXGVbMG1cXSAnCiAgICBQUzI9J1xbXGVbMzNtXF0+XFtcZVswbVxdICcKZmkK
+	EOF
+
+	## /etc/profile.d/proot.sh
+	if test_is_android; then
+		_add_file --override "${_opt_rootfs_dir}/etc/profile.d/proot.sh" <<EOF
+## Edit Path
+## i [path] # Insert
+## a [path] # Append
+path_edit() {
+	if test \$# -eq 2; then
+		if test -e "\$2"; then
+			case ":\$PATH:" in
+			*:"\$2":*) ;;
+			*)
+				case "\$1" in
+				i) PATH="\${2}\${PATH:+:\$PATH}" ;;
+				a) PATH="\${PATH:+\$PATH:}\${2}" ;;
+				esac
+				;;
+			esac
+		fi
+	fi
+}
+
+## Insert host path
+path_edit a "${PREFIX}"
+
+## Insert android path
+path_edit a "/system/bin"
+path_edit a "/system/xbin"
+
+## End inserting path
+export PATH
+unset -f path_edit
+
+export COLORTERM=truecolor
+[ -z "\$LANG" ] && export LANG=C.UTF-8
+export TERM=xterm-256color
+export TMPDIR=/tmp
+export PULSE_SERVER=127.0.0.1
+export MOZ_FAKE_NO_SANDBOX=1
+export CHROMIUM_FLAGS="--no-sandbox"
+
+## Android env
+$(for env in \
+			EXTERNAL_STORAGE \
+			ANDROID_DATA \
+			ANDROID_ROOT \
+			ANDROID_RUNTIME_ROOT \
+			ANDROID_TZDATA_ROOT \
+			BOOTCLASSPATH \
+			DEX2OATBOOTCLASSPATH; do
+			eval "printf \"\${${env}+export ${env}=\\\"\$${env}\\\"\\\n}\""
+		done)
+EOF
+	fi
+
+	## Add fake files
+	proot_fake_rootfs_dir="$(get_conf "${_opt_rootfs_dir}" proot_fake_rootfs_dir)"
+
+	## /porc/loadavg
+	_add_file "${proot_fake_rootfs_dir}/proc/loadavg" <<-EOF
+		0.77 0.18 0.06 5/136 903
+	EOF
+
+	## /proc/stat
+	base64 -d <<-EOF | gzip -d | _add_file "${proot_fake_rootfs_dir}/proc/stat"
+		H4sIAAAAAAAAA+2S3QrCMAyF7/sU5xGaLP3Z0wirVYrazbUDH9/O7UoErwU5kOSEJDf5wrQAIhYa
+		1BsGaQ3u/Gq5hSYVpkV/GUm5ziDpyUE0DG3tN5HxW7a79x1YWiHeMth8XPrrh6VCfdSGjjaihppu
+		sf2+156JyappHkMsJRZ4cS9XDvOSc8pnmN0P1zFc4rFdKuOppvmOjsg4dLDaMSyswDXusLK4wUjO
+		CaknkgDXlNcCAAA=
+	EOF
+
+	## /proc/uptime
+	_add_file "${proot_fake_rootfs_dir}/proc/uptime" <<-EOF
+		27.95 1.00
+	EOF
+
+	## /proc/version
+	_add_file "${proot_fake_rootfs_dir}/proc/version" <<-EOF
+		Linux version 6.1.0-13-faked (builder@server) \
+		(gcc-12 (12.2.0-14) 12.2.0, GNU ld (GNU Binutils) 2.40) \
+		#1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29)
+	EOF
+
+	## /proc/vmstat
+	base64 -d <<-EOF | gzip -d | _add_file "${proot_fake_rootfs_dir}/proc/vmstat"
+		H4sIAAAAAAAAA3VWWZqzKhB971W4hDhE42r4iBLlBsELmP66V/9XFTjbb9Y51EBRg9qylxWCjbwT
+		LknzsqqqL23Zr9GCSc0bLz+CcW10khb3/LFwWyZL72edl1QiKe5ldTvqEJMWxaNemEmLj2w8fwJT
+		1nm5EN9WeohO6FbqLnmkGTKDMs17Ofc0k25EEty4cBES6GLNwFGaBs566ZM8uz/SIsiDdG7mXsYK
+		2elZlNoLqwT/iCQr8yyA4JWrnQXje2GDsz9ydZGmPzJ0mZyrvDjFn8yKRnE5BKK43RZi0luqyguy
+		I51R3Is2BHLbQeTx9vVt7Bty7IRn2rSUww1kxYtPys/6F8zZDN0IXFwoLdRZywrn4TEuPQXmOuB4
+		7XA5VJ5ruk5LytvAx1G0SfpIH/Q0aCaeKbOyThFrpfU/c5lR7T05lNptJzIvhjFgrh/EACVSLgLr
+		p05sijCA49BG97fF9eFgCGd/jq7hLddQ1lZof9T5DK7hOkS2Q+QwiFZigndpwetJzEEZUoCKXujk
+		UVFlvoXVQmFfNLsCC/EZpdgoNbzd/5O0y1Vm2AroFzfD0ZTzmL4srSihGDmjYo55L2rC3TcfG970
+		szK9AvM9PHhvVJvk97q+rwS+QWeh69vNmbSq4RJjN3YSOq2us+xGkpl8UhRp+TW6bwgTHOAHoshz
+		BU3NIOfQ1lsxz5I8z+/ZYwG1sQN0/6o0mE9MDslwU0hES9NmD4CtHbRY2mCrsbFzbzlGQ6tARqK4
+		CYXkrTLOvKSoHre8wkhjm8Fgv6UItGKB8LTivz+kQcmiPoZ+KQsYGmM38P8ikj62h1tShbaXSsXP
+		yYkkL+sa1ZwXXLE3vmk4GQB4OtGEpLdiMFCZmyMR2ZyhKt4aQfnIBxmLwHg/Zw+JODuiFOfFHMlK
+		khhZ2jax6NmLAxgcSxqGeBJEnLCOoVFNdAiQ7c5ETJlv9j1w+8a1w6Bjmrf6Weledv0lj40B1Wmn
+		ECPcDIc0fLfWjNQ21CkzgBHBtzEDe4f3oMU0QjansQXVZcPh6LjEYdcxeugrKC692Sx2LcyHzsag
+		oEqCwNzUNIL26YphGgHw/Rh1JIyz9eAevz48KokP3phhhMpli7flCWaGlv0ZnrfcBqKO22oGxwu9
+		xDcjLYfyhCnL3+KM/h1RPHAIrPfqyZ5T2/6wMEdWfycqRrb5CWBQtayZFFZnnadldiJXT0cGJmUz
+		AVOdGPqfAqasi/xMTjrSZ8UGRr69dOZwa7VE4YvGnwe81Q55ARQ37BlkTc9tJyLXwKLhoxM7K3tw
+		7Vsyhgt15xKBo8cttndI1LKNEaFqpCY4AXvXrXgJC4n5U2M4mJxm+VdYEwxuIz+ge2fLOluF7S2f
+		qAJ1KPVLhbk/IxDlAYnFjJMOphSzfP2iv2cYOmHkQlqYEh+hsnADl8CqPHL5zN3Cr6zzcU39A6tn
+		Lxp1DAAA
+	EOF
+
+	## /proc/sys/kernel/cap_last_cap
+	_add_file "${proot_fake_rootfs_dir}/proc/sys/kernel/cap_last_cap" <<-EOF
+		40
+	EOF
+
+	## /proc/sys/fs/inotify/
+	_add_file "${proot_fake_rootfs_dir}/proc/sys/fs/inotify/max_queued_events" <<-EOF
+		16384
+	EOF
+
+	_add_file "${proot_fake_rootfs_dir}/proc/sys/fs/inotify/max_user_instances" <<-EOF
+		128
+	EOF
+
+	_add_file "${proot_fake_rootfs_dir}/proc/sys/fs/inotify/max_user_watches" <<-EOF
+		65536
+	EOF
+
+	## Reset trap for HUP/INT/TERM.
+	trap - EXIT
+	msg_info "Installing rootfs to [${_opt_rootfs_dir}] finished."
+	msg_info "${CYN}Now run '${YLW}${SCRIPT_NAME} run ${_opt_rootfs_dir}${CYN}' to login rootfs.${DEF}"
+}
+
+command_run() {
+	_FUNC_NAME='run'
+	_show_help() {
+		msg <<-EOF
+			${BLD}Command ${_FUNC_NAME}${DEF}
+			  ${CUR}Start an installed rootfs.${DEF}
+
+			  Usage:
+			    ${DIM}${CUR}## login default shell${DEF}
+			    ${YLW}${SCRIPT_NAME} ${_FUNC_NAME} [OPTION...] [ROOTFS_DIR]${DEF}
+
+			    ${DIM}${CUR}## login and run commands${DEF}
+			    ${YLW}${SCRIPT_NAME} ${_FUNC_NAME} [OPTION...] [ROOTFS_DIR] -- [COMMAND] ...${DEF}
+
+			  Options:
+			    ${CYN}-h${DEF}, ${CYN}--help${DEF}\t \tshow this help
+			    ${CYN}--host-utils${DEF} \tandroid only
+				\t \t\tmount android external storage
+				\t \t\tadd \${PREFIX}/bin to \$PATH
+			    ${CYN}--${DEF}\t \t\trun commands within rootfs
+
+			    ${DIM}${CUR}PRoot relavent options:${DEF}
+			    ${DIM}${CUR}(you can get more info from proot.)${DEF}
+			    ${CYN}-b${DEF}, ${CYN}--bind${DEF}, ${CYN}-m${DEF}, ${CYN}--mount${DEF}
+			    ${CYN}--no-kill-on-exit${DEF}
+			    ${CYN}--no-link2symlink${DEF}
+			    ${CYN}--no-sysvipc${DEF}
+			    ${CYN}--fix-low-ports${DEF}
+			    ${CYN}-q${DEF}, ${CYN}--qemu${DEF}
+			    ${CYN}-k${DEF}, ${CYN}--kernel-release${DEF}\n
+		EOF
+	}
+
+	## Default option value
+	_opt_is_host_utils() { false; }
+
+	## PRoot relavent options
+	_opt_is_kill_on_exit() { true; }
+	_opt_is_link2symlink() { true; }
+	_opt_is_sysvipc() { true; }
+	_opt_is_fix_flow_ports() { false; }
+
+	get_proot_longopt_val() {
+		echo "$1" | cut -d= -f2-
+	}
+
+	if test $# -gt 0; then
+		while test $# -gt 0; do
+			case "$1" in
+			--)
+				shift
+				if test $# -gt 0; then
+					_opt_args_base64="$(
+						while test $# -gt 0; do
+							printf "%s\n" "$(echo "$1" | base64 -w999999999999999999)"
+							shift
+						done
+					)"
+				else
+					err_no_arg "--"
+				fi
+				shift $#
+				;;
+			-b | --bind=* | -m | --mount=*)
+				case "$1" in
+				-b | -m)
+					shift
+					_opt_val="$1"
+					;;
+				*)
+					_opt_val="$(get_proot_longopt_val "$1")"
+					;;
+				esac
+				_opt_bindings="${_opt_bindings+${_opt_bindings} }\"${_opt_val}\""
+				shift
+				;;
+			--cwd=* | --pwd=*)
+				_opt_cwd="$(get_proot_longopt_val $1)"
+				shift
+				;;
+			-h | --help)
+				_show_help
+				exit
+				;;
+			--host-utils)
+				shift
+				_opt_is_host_utils() { true; }
+				;;
+			--no-kill-on-exit)
+				shift
+				_opt_is_kill_on_exit() { false; }
+				;;
+			--no-link2symlink)
+				shift
+				_opt_is_link2symlink() { false; }
+				;;
+			--no-sysvipc)
+				shift
+				_opt_is_sysvipc() { false; }
+				;;
+			--fix-low-ports)
+				shift
+				_opt_is_fix_flow_ports() { true; }
+				;;
+			-q | --qemu=*)
+				case "$1" in
+				-q)
+					shift
+					_opt_qemu="$1"
+					;;
+				*)
+					_opt_qemu="$(get_proot_longopt_val "$1")"
+					;;
+				esac
+				shift
+				;;
+			-k | --kernel-release=*)
+				case "$1" in
+				-k)
+					_opt_kernel_release="$1"
+					msg 'kernel called'
+					shift
+					;;
+				*)
+					_val="$(get_proot_longopt_val "$1")"
+					if test -n "${_val}"; then
+						_opt_kernel_release="${_val}"
+					else
+						exit_error_argument_not_recognized "$1"
+					fi
+					;;
+				esac
+				shift
+				;;
+			*)
+				if ! test "${_opt_rootfs_dir+1}"; then
+					if test -d "$1"; then
+						_opt_rootfs_dir="$(trim_path "$1")"
+					else
+						err "rootfs dir [$1] not exists"
+					fi
+				else
+					err_args_not_handled "$1"
+					break
+				fi
+				shift
+				;;
+			esac
+		done
+	else
+		err_args_not_handled
+	fi
+
+	if ! test "${_opt_rootfs_dir+1}"; then
+		err "rootfs not set"
+	fi
+
+	setup_proot_path
+	setup_proot_env "${_opt_rootfs_dir}"
+
+	## ========== Options from proot help ==========
+	## Regular options:
+	##   -r *path*, --rootfs=*path*
+	##         Use *path* as the new guest root file-system, default is /.
+
+	##         The specified path typically contains a Linux distribution where
+	##         all new programs will be confined.  The default rootfs is /
+	##         when none is specified, this makes sense when the bind mechanism
+	##         is used to relocate host files and directories, see the -b
+	##         option and the Examples section for details.
+
+	##         It is recommended to use the -R or -S options instead.
+
+	set -- "$@" "--rootfs=${_opt_rootfs_dir}"
+
+	##   -b *path*, --bind=*path*, -m *path*, --mount=*path*
+	##         Make the content of *path* accessible in the guest rootfs.
+
+	##         This option makes any file or directory of the host rootfs
+	##         accessible in the confined environment just as if it were part of
+	##         the guest rootfs.  By default the host path is bound to the same
+	##         path in the guest rootfs but users can specify any other location
+	##         with the syntax: -b *host_path*:*guest_location*.  If the
+	##         guest location is a symbolic link, it is dereferenced to ensure
+	##         the new content is accessible through all the symbolic links that
+	##         point to the overlaid content.  In most cases this default
+	##         behavior shouldn't be a problem, although it is possible to
+	##         explicitly not dereference the guest location by appending it the
+	##         ! character: -b *host_path*:*guest_location!*.
+
+	if test "${_opt_qemu+1}"; then
+		set -- "$@" "--qemu=${_opt_qemu}"
+	fi
+
+	##   -q *command*, --qemu=*command*
+	##         Execute guest programs through QEMU as specified by *command*.
+
+	##         Each time a guest program is going to be executed, PRoot inserts
+	##         the QEMU user-mode command in front of the initial request.
+	##         That way, guest programs actually run on a virtual guest CPU
+	##         emulated by QEMU user-mode.  The native execution of host programs
+	##         is still effective and the whole host rootfs is bound to
+	##         /host-rootfs in the guest environment.
+
+	##   -w *path*, --pwd=*path*, --cwd=*path*
+	##         Set the initial working directory to *path*.
+
+	##         Some programs expect to be launched from a given directory but do
+	##         not perform any chdir by themselves.  This option avoids the
+	##         need for running a shell and then entering the directory manually.
+
+	if test "${_opt_cwd+1}"; then
+		set -- "$@" "--cwd=${_opt_cwd}"
+	else
+		set -- "$@" "--cwd=/root"
+	fi
+
+	##   --kill-on-exit
+	##         Kill all processes on command exit.
+
+	##         When the executed command leaves orphean or detached processes
+	##         around, proot waits until all processes possibly terminate. This option forces
+	##         the immediate termination of all tracee processes when the main_func command exits.
+
+	if _opt_is_kill_on_exit; then
+		set -- "$@" "--kill-on-exit"
+	fi
+
+	##   -v *value*, --verbose=*value*
+	##         Set the level of debug information to *value*.
+
+	##         The higher the integer value is, the more detailed debug
+	##         information is printed to the standard error stream.  A negative
+	##         value makes PRoot quiet except on fatal errors.
+
+	##   -V, --version, --about
+	##         Print version, copyright, license and contact, then exit.
+
+	##   -h, --help, --usage
+	##         Print the version and the command-line usage, then exit.
+
+	## Extension options:
+	##   -k *string*, --kernel-release=*string*
+	##         Make current kernel appear as kernel release *string*.
+
+	##         If a program is run on a kernel older than the one expected by its
+	##         GNU C library, the following error is reported: "FATAL: kernel too
+	##         old".  To be able to run such programs, PRoot can emulate some of
+	##         the features that are available in the kernel release specified by
+	##         *string* but that are missing in the current kernel.
+
+	if test "${_opt_kernel_release+1}"; then
+		set -- "$@" "--kernel-release=${_opt_kernel_release}"
+	fi
+
+	##   -0, --root-id
+	##         Make current user appear as "root" and fake its privileges.
+
+	##         Some programs will refuse to work if they are not run with "root"
+	##         privileges, even if there is no technical reason for that.  This
+	##        is typically the case with package managers.  This option allows
+	##         users to bypass this kind of limitation by faking the user/group
+	##         identity, and by faking the success of some operations like
+	##         changing the ownership of files, changing the root directory to
+	##         /, ...  Note that this option is quite limited compared to
+	##         fakeroot.
+
+	set -- "$@" "--root-id"
+
+	##   -i *string*, --change-id=*string*
+	##         Make current user and group appear as *string* "uid:gid".
+
+	##         This option makes the current user and group appear as uid and
+	##         gid.  Likewise, files actually owned by the current user and
+	##         group appear as if they were owned by uid and gid instead.
+	##         Note that the -0 option is the same as -i 0:0.
+
+	##   --link2symlink, -l
+	##         Replace hard links with symlinks, pretending they are really hardlinks
+
+	##         Emulates hard links with symbolic links when SELinux policies
+	##         do not allow hard links.
+
+	if _opt_is_link2symlink; then
+		set -- "$@" "--link2symlink"
+	fi
+
+	##   --sysvipc
+	##         Handle System V IPC syscalls in proot
+
+	##         Handles System V IPC syscalls (shmget, semget, msgget, etc.)
+	##         syscalls inside proot. IPC is handled inside proot and launching 2 proot instances
+	##         will lead to 2 different IPC Namespaces
+
+	if test_is_android; then
+		if _opt_is_sysvipc; then
+			set -- "$@" "--sysvipc"
+		fi
+	fi
+
+	##   --ashmem-memfd
+	##         Emulate memfd_create support through ashmem and simulate fstat.st_size for ashmem
+
+	if test_is_android; then
+		set -- "$@" "--ashmem-memfd"
+	fi
+
+	##   -H
+	##         Hide files and directories starting with '.proot.' .
+
+	if test_is_android; then
+		set -- "$@" "-H"
+	fi
+
+	##   -p
+	##         Modify bindings to protected ports to use a higher port number.
+
+	if test_is_android; then
+		if _opt_is_fix_flow_ports; then
+			set -- "$@" "-p"
+		fi
+	fi
+
+	##   -L
+	##         Correct the size returned from lstat for symbolic links.
+
+	if test_is_android; then
+		set -- "$@" "-L"
+	fi
+
+	## ========== Bindings ==========
+	## Core file systems that should always be present.
+	set -- "$@" "--bind=/dev"
+	set -- "$@" "--bind=/dev/urandom:/dev/random"
+	set -- "$@" "--bind=/proc"
+	set -- "$@" "--bind=/proc/self/fd:/dev/fd"
+	if test -t 0; then
+		set -- "$@" "--bind=/proc/self/fd/0:/dev/stdin"
+	fi
+	set -- "$@" "--bind=/proc/self/fd/1:/dev/stdout"
+	set -- "$@" "--bind=/proc/self/fd/2:/dev/stderr"
+	set -- "$@" "--bind=/sys"
+
+	## Bind fake rootfs files accordingly
+	PROOT_BINDING_ROOTFS_DIR=$(get_conf "${_opt_rootfs_dir}" proot_fake_rootfs_dir)
+	for f in $(
+		cd "${PROOT_BINDING_ROOTFS_DIR}" && find . -type f -exec sh -c 'printf "%s" "$1"|cut -b 2-' _ {} \;
+	); do
+		if ! cat "${f}" >/dev/null 2>&1; then
+			set -- "$@" "--bind=${PROOT_BINDING_ROOTFS_DIR}${f}:${f}"
+		fi
+	done
+
+	## Bind /tmp to /dev/shm.
+	if ! test -d "${_opt_rootfs_dir}/tmp"; then
+		mkdir -p "${_opt_rootfs_dir}/tmp"
+		chmod 1777 "${_opt_rootfs_dir}/tmp"
+	fi
+	set -- "$@" "--bind=${_opt_rootfs_dir}/tmp:/dev/shm"
+
+	if _opt_is_host_utils; then
+		if test_is_android; then
+			## External storage
+			if ls -1 /storage/emulated/0/ >/dev/null 2>&1; then
+				set -- "$@" "--bind=/storage/emulated/0"
+				set -- "$@" "--bind=/storage/emulated/0:/sdcard"
+			fi
+
+			## termux-x11 requirements:
+			##	bindings: /system /apex /vendor /data/app
+			## 	enviroment: ANDROID_DATA ANDROID_RUNTIME_ROOT ANDROID_TZDATA_ROOT BOOTCLASSPATH
+
+			test -d "/system" && set -- "$@" "--bind=/system"
+			test -d "/apex" && set -- "$@" "--bind=/apex"
+			test -d "/vendor" && set -- "$@" "--bind=/vendor"
+
+			set -- "$@" "--bind=/data/app"
+			## set -- "$@" "--bind=/system/product"
+			## set -- "$@" "--bind=/odm"
+
+			## Bindings for anotherterm
+			if test_is_anotherterm; then
+				## Aotherterm env is dynamic, thus genarate every time when starting if needed.
+				## TERMSH_UID for $TERMSH spoofing dectect
+				if ! test ${USER_ID+1}; then USER_ID="$(id -u)"; fi
+				export TERMSH_UID="${USER_ID}" # "$(id -u)" does not work for old Androids.
+
+				## Anotherterm env profile
+				_ANOTHTERTERM_PROFILE_PATH="$(get_conf "${_opt_rootfs_dir}" anotherterm_profile_path)"
+				for shell_env in $(set | cut -d= -f1); do
+					case "${shell_env}" in
+					APP_ID | DATA_DIR | LIB_DIR | TERMSH | TERMSH_UID | SHELL_SESSION_TOKEN) ;;
+					INPUT*) ;;
+					*) continue ;;
+					esac
+					printf 'export %s=%s\n' "${shell_env}" "$(printenv "${shell_env}")" >>"${_ANOTHTERTERM_PROFILE_PATH}"
+				done
+				set -- "$@" "--bind=${_ANOTHTERTERM_PROFILE_PATH}:/etc/profile.d/anotherterm.sh"
+
+				set -- "$@" "--bind=$(realpath ${DATA_DIR})"
+				set -- "$@" "--bind=${LIB_DIR}"
+			fi
+
+			## Bindings for termux
+			if test_is_termux; then
+				set -- "$@" "--bind=/data/dalvik-cache"
+				set -- "$@" "--bind=/data/data/com.termux/cache"
+				set -- "$@" "--bind=/data/data/com.termux/files/usr"
+				if test -d "/data/data/com.termux/files/apps"; then
+					set -- "$@" "--bind=/data/data/com.termux/files/apps"
+				fi
+			fi
+		fi
+	fi
+
+	## User custom bindings
+	if test "${_opt_bindings+1}"; then
+		for val in ${_opt_bindings}; do
+			set -- "$@" "--bind=$(eval "printf '%s' ${val}")"
+		done
+	fi
+
+	## ========== PRoot user command ==========
+	## Setup the default environment
+	if stat "${_opt_rootfs_dir}/usr/bin/env" >/dev/null 2>&1; then
+		set -- "$@" "/usr/bin/env" "-i" \
+			"HOME=/root" \
+			"LANG=C.UTF-8" \
+			"TERM=${TERM-xterm-256color}"
+	fi
+
+	## Start user command or default shell
+	if test "${_opt_args_base64+1}"; then
+		for line in ${_opt_args_base64}; do
+			set -- "$@" "$(echo "$line" | base64 -d)"
+		done
+	else
+		## If no argument command, login to root default shell
+		set -- "$@" "$(grep -e "^root" "${_opt_rootfs_dir}/etc/passwd" | cut -d: -f7)" -l
+	fi
+
+	## ========== Start proot ==========
+	trap 'rm -rf $(get_conf "${_opt_rootfs_dir}" proot_tmp_dir)' EXIT HUP INT TERM
+
+	if script_opt_is_verbose; then
+		if test "${_opt_bindings+1}"; then
+			msg "User custom bindings: [${_opt_bindings}]"
+		else
+			msg "User custom bindings: null"
+		fi
+		if test "${_opt_args_base64+1}"; then
+			msg "user_commands: $(
+				for line in ${_opt_args_base64}; do
+					printf '[%s], ' "$(echo "$line" | base64 -d)"
+				done
+			)"
+		else
+			msg "PRoot argument command: null"
+		fi
+		msg "proot_start_cmd: [\n$(pretty_print "${PROOT}" "$@")\n]"
+	fi
+
+	"${PROOT}" "$@"
+}
+
+command_archive() {
+	_FUNC_NAME='archive'
+	_show_help() {
+		msg <<-EOF
+			${BLD}Command ${_FUNC_NAME}${DEF}
+			  ${CUR}Archive a rootfs to stdout.${DEF}
+
+			  Usage:
+			    ${YLW}${SCRIPT_NAME} ${_FUNC_NAME} [ROOTFS_DIR]${DEF}
+
+			  Options:
+			    ${CYN}-h${DEF}, ${CYN}--help${DEF}  show this help\n
+		EOF
+	}
+
+	if test $# -gt 0; then
+		while test $# -gt 0; do
+			case "$1" in
+			-h | --help)
+				_show_help
+				exit
+				;;
+			-v | -vv | --verbose)
+				case "$1" in
+				-vv) _opt_tar_verbose_flag="-vv" ;;
+				-v | --verbose)
+					if ! test ${_opt_tar_verbose_flag+1}; then
+						_opt_tar_verbose_flag="-v"
+					else
+						_opt_tar_verbose_flag="-vv"
+					fi
+					;;
+				esac
+				shift
+				;;
+			*)
+				if ! test "${_opt_rootfs_dir+1}"; then
+					if test -d "$1"; then
+						if (
+							cd "$(get_conf "$1" proot_sessions_dir)" && test "$(find . -maxdepth 1 -type d -not -name . | wc -l)" -eq 0
+						); then
+							_opt_rootfs_dir="$(trim_path "$1")"
+						else
+							err "Rootfs [$1] appears to be in use"
+						fi
+					else
+						err "Rootfs dir [$1] not exists"
+					fi
+					shift
+				else
+					err_args_not_handled "$@"
+				fi
+				;;
+			esac
+		done
+	else
+		err_no_arg
+	fi
+
+	if ! test ${_opt_rootfs_dir+1}; then
+		err "rootfs not set"
+	fi
+
+	if test $# -gt 0; then
+		err_args_not_handled "$@"
+	fi
+
+	trap 'rm -rf ${PROOT_TMP_DIR}' EXIT HUP INT TERM
+
+	setup_proot_path
+	setup_proot_env "${_opt_rootfs_dir}"
+
+	set -- "$@" "--rootfs=${_opt_rootfs_dir}"
+	set -- "$@" "--root-id"
+	set -- "$@" "--link2symlink"
+	set -- "$@" "--cwd=/"
+	set -- "$@" "/bin/tar"
+
+	if test "${_opt_tar_verbose_flag+1}"; then
+		set -- "$@" "${_opt_tar_verbose_flag}"
+	fi
+
+	set -- "$@" "--exclude=./tmp/*"
+	set -- "$@" "--exclude=.*sh_history"
+	set -- "$@" "--exclude=$(get_conf . script_workspace_dir)"
+	set -- "$@" "--exclude=./etc/profile.d/proot.sh"
+	set -- "$@" "-c" "."
+
+	if script_opt_is_verbose; then
+		msg "proot_archive_cmd=[\n$(pretty_print "${PROOT}" "$@")\n]"
+	fi
+
+	msg_info "Archiving rootfs [${_opt_rootfs_dir}] ..."
+	"${PROOT}" "$@"
+	msg_info "Archiving rootfs [${_opt_rootfs_dir}] finished."
+}
+
+main_func() {
+	_show_help() {
+		msg <<-EOF
+			${YLW}
+			  █▀█ █▀█ █▀█ █▀█ ▀█▀ █ █▀▀
+			  █▀▀ █▀▄ █▄█ █▄█ ░█░ █ ██▄
+			${DEF}${CUR}
+			  * Minimal proot wrapper written in posix shell.
+			  * Supports both android and linux.
+			  * Anotherterm and Termux are well supported.
+			  * Install the rootfs archive to anywhere you want.
+			  * Archive to the standerd rootfs format that will not break.
+			${DEF}
+			  Usage:
+			    ${YLW}${SCRIPT_NAME} [OPTION...] [COMMAND]${DEF}
+			  
+			    ${DIM}${CUR}## show help info of each command${DEF}
+			    ${YLW}${SCRIPT_NAME} [COMMAND] --help${DEF}
+
+			  Options:
+			    ${CYN}-h${DEF}, ${CYN}--help${DEF}\t \tshow this help
+			    ${CYN}--help-all${DEF}\t \tshow all help
+			    ${CYN}-v${DEF}, ${CYN}--verbose${DEF}\tprint more information
+			    ${CYN}-x${DEF}\t\t \trun this script in '${YLW}set -x${DEF}'
+
+			  Commands:
+			    ${YLW}install${DEF}\t \tinstall rootfs
+			    ${YLW}run${DEF}\t\t \trun rootfs
+			    ${YLW}archive${DEF}\t \tarchive rootfs
+
+			  Related environment variables:
+			    ${YLW}PROOT${DEF}\t   \tpath to proot\n
+		EOF
+	}
+
+	script_opt_is_verbose() { false; }
+
+	if test $# -gt 0; then
+		while test $# -gt 0; do
+			case "$1" in
+			-h | --help | --help-all)
+				case "$1" in
+				-h | --help)
+					_show_help
+					;;
+				--help-all)
+					_show_help
+					for cmd in command_install command_run command_archive; do
+						(${cmd} -h)
+					done
+					;;
+				esac
+				exit
+				;;
+			-v | --verbose)
+				shift
+				script_opt_is_verbose() { true; }
+				;;
+			-x)
+				shift
+				set -x
+				;;
+			install)
+				shift
+				command_install "$@"
+				break
+				;;
+			run)
+				shift
+				command_run "$@"
+				break
+				;;
+			archive)
+				shift
+				command_archive "$@"
+				break
+				;;
+			*)
+				err_args_not_handled "$1"
+				;;
+			esac
+		done
+	else
+		_show_help
+	fi
+}
+
+main_func "$@"
