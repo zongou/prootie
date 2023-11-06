@@ -319,7 +319,7 @@ path_edit() {
 }
 
 ## Insert host path
-${PREFIX+path_edit a \"${PREFIX}\"}
+path_edit a "${PREFIX}/bin"
 
 ## Insert android path
 path_edit a "/system/bin"
