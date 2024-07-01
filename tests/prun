@@ -1,0 +1,26 @@
+#!/bin/sh
+
+rootfs_dir="${TMPDIR}/prun_dir"
+mkdir -p "${rootfs_dir}/etc"
+
+resolv_conf="${rootfs_dir}/etc/resolv.conf"
+
+if ! test -f "${resolv_conf}"; then
+	cat <<EOF >"${resolv_conf}"
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+EOF
+fi
+
+hosts_conf="${rootfs_dir}/etc/hosts"
+if ! test -f "${hosts_conf}"; then
+	cat <<EOF >"${hosts_conf}"
+127.0.0.1       localhost localhost.localdomain_func
+::1             localhost localhost.localdomain_func
+EOF
+fi
+
+proot \
+	--bind="${resolv_conf}:/etc/resolv.conf" \
+	--bind="${hosts_conf}:/etc/hosts" \
+	"$@"
