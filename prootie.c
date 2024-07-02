@@ -23,7 +23,7 @@
 static char *prog_path;
 static char *prog_short;
 static char *command_name;
-int is_verbose;
+static int is_verbose;
 
 int command_install(int argc, char *argv[]) {
   printf("Install %s\n", argv[1]);
@@ -67,7 +67,9 @@ PRoot relavent options:\n\
 }
 
 int command_login(int argc, char *argv[]) {
-  // list_array(argc, argv, "argv");
+  if (is_verbose) {
+    list_array(argc, argv, "argv");
+  }
   command_name = "login";
   if (argc < 2) {
     show_login_help();
@@ -203,7 +205,9 @@ int command_login(int argc, char *argv[]) {
   strlist_add(&proot_envp, my_asprintf("PROOT_TMP_DIR=%s", proot_tmp_dir));
   char *proot_l2s_dir = my_asprintf("%s/.proot/meta", resolved_rootfs);
   strlist_add(&proot_envp, my_asprintf("PROOT_L2S_DIR=%s", proot_l2s_dir));
-  // strlist_list(proot_envp, "env");
+  if (is_verbose) {
+    strlist_list(proot_envp, "env");
+  }
 
   char **proot_argv = strlist_new();
   strlist_add(&proot_argv, proot_path);
@@ -284,7 +288,9 @@ int command_login(int argc, char *argv[]) {
     strlist_add(&proot_argv, "-l");
   }
 
-  // strlist_list(proot_argv, "args");
+  if (is_verbose) {
+    strlist_list(proot_argv, "args");
+  }
   execve(proot_path, proot_argv, proot_envp);
 
   exit(0);
@@ -330,41 +336,33 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if (strcmp("install", argv[1]) == 0) {
-    command_install(argc - 1, argv + 1);
-  } else if (strcmp("login", argv[1]) == 0) {
-    command_login(argc - 1, argv + 1);
-  } else if (strcmp("archive", argv[1]) == 0) {
-    command_archive(argc - 1, argv + 1);
-  } else if (argv[1][0] != '-') {
-    fprintf(stderr, "%s: Unknown command '%s'\n", prog_path, argv[1]);
-    exit(EXIT_FAILURE);
-  }
-
-  static struct option long_options[] = {{"help", no_argument, NULL, 'h'},
-                                         {"verbose", no_argument, NULL, 'v'},
-                                         {NULL, 0, NULL, 0}}; // End mark
-  int c;
-  while ((c = getopt_long(argc, argv, "hv", long_options, NULL)) != -1) {
-    switch (c) {
-    case 'h':
-      show_help();
-      return 0;
-      break;
-    case 'v':
-      is_verbose = 1;
-      break;
-    case '?':
-      fprintf(stderr, "%s: Unknown option '%s'.\n", prog_path,
-              argv[optind - 1]);
+  for (int i = 1; i < argc; i++) {
+    switch (argv[i][0]) {
+    case '-':
+      printf("option\n");
+      switch (argv[i][1]) {
+      case 'v':
+        is_verbose = 1;
+        break;
+      }
       break;
     default:
-      abort();
-    }
-  }
+      command_name = argv[i];
+      int forwarded_argc = argc - i;
+      char **forwarded_argv = argv + i;
 
-  if (is_verbose) {
-    printf("is verbose");
+      if (strcmp("install", command_name) == 0) {
+        command_install(forwarded_argc, forwarded_argv);
+      } else if (strcmp("login", command_name) == 0) {
+        command_login(forwarded_argc, forwarded_argv);
+      } else if (strcmp("archive", command_name) == 0) {
+        command_archive(forwarded_argc, forwarded_argv);
+      } else {
+        fprintf(stderr, "%s: Unknown command '%s'\n", prog_path, command_name);
+        exit(EXIT_FAILURE);
+      }
+      break;
+    }
   }
 
   return 0;
