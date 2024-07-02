@@ -30,14 +30,6 @@ int command_install(int argc, char *argv[]) {
   return 0;
 }
 
-void list_array(int argc, char *argv[], char *title) {
-  printf("==== List of %s ====\n", title);
-  for (int i = 0; i < argc; i++) {
-    printf("%s[%d]=%s\n", title, i, argv[i]);
-  }
-  printf("==== End list ====\n");
-}
-
 void show_login_help() {
   fprintf(stderr, "\
 Login into an installed rootfs.\n\

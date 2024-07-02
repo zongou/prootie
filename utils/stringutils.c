@@ -17,6 +17,14 @@ char **strlist_new() { return calloc(1, sizeof(char *)); }
 //   }
 // }
 
+void list_array(int argc, char *argv[], char *title) {
+  printf("==== List of %s ====\n", title);
+  for (int i = 0; i < argc; i++) {
+    printf("%s[%d]=%s\n", title, i, argv[i]);
+  }
+  printf("==== End list ====\n");
+}
+
 int strlist_len(char **str_list) {
   int i = 0;
   while (str_list[i] != NULL) {
