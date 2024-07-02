@@ -17,7 +17,7 @@ char **strlist_new() { return calloc(1, sizeof(char *)); }
 //   }
 // }
 
-void list_array(int argc, char *argv[], char *title) {
+void list_string_array(int argc, char *argv[], char *title) {
   printf("==== List of %s ====\n", title);
   for (int i = 0; i < argc; i++) {
     printf("%s[%d]=%s\n", title, i, argv[i]);
@@ -34,13 +34,7 @@ int strlist_len(char **str_list) {
 }
 
 void strlist_list(char **str_list, char *title) {
-  if (str_list != NULL) {
-    printf("==== %s(%d) ====\n", title, strlist_len(str_list));
-    for (int i = 0; i < strlist_len(str_list); i++) {
-      printf("%s\n", str_list[i]);
-    }
-    printf("=========================\n");
-  }
+  list_string_array(strlist_len(str_list), str_list, title);
 }
 
 /**

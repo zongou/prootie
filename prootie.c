@@ -60,7 +60,7 @@ PRoot relavent options:\n\
 
 int command_login(int argc, char *argv[]) {
   if (is_verbose) {
-    list_array(argc, argv, "argv");
+    list_string_array(argc, argv, "argv");
   }
   command_name = "login";
   if (argc < 2) {
