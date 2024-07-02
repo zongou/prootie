@@ -131,7 +131,7 @@ int command_login(int argc, char *argv[]) {
       {"qemu", required_argument, NULL, 'q'},
       {NULL, 0, NULL, 0}}; // End mark
   int c;
-  while ((c = getopt_long(split_token_index, argv, "hvb:w:i:k:q:", long_options,
+  while ((c = getopt_long(split_token_index, argv, "hvb:w:k:q:", long_options,
                           NULL)) != -1) {
     // printf("optind=%d\n", optind);
     switch (c) {
