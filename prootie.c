@@ -295,7 +295,7 @@ int command_archive(int argc, char *argv[]) {
 
 void show_help() {
   fprintf(stderr, "\
-%s is a PRoot wrapper.\n\
+%s super charges PRoot.\n\
 \n\
 Usage:\n\
   %s [OPTION...] [COMMAND]\n\
