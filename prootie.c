@@ -321,7 +321,6 @@ Related environment variables:\n\
 int main(int argc, char *argv[]) {
   prog_path = argv[0];
   prog_short = basename(prog_path);
-  opterr = 0;
 
   if (argc < 2) {
     show_help();
