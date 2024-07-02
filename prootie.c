@@ -22,16 +22,73 @@
 
 static char *prog_path;
 static char *prog_short;
+static char *help_info;
 static char *command_name;
 static int is_verbose;
 
+void show_help() { fprintf(stderr, "%s", help_info); }
+
 int command_install(int argc, char *argv[]) {
-  printf("Install %s\n", argv[1]);
+  help_info = my_asprintf("\
+Install tar archived rootfs from stdin.\n\
+\n\
+Usage:\n\
+  %s %s [OPTION...] [ROOTFS_DIR]\n\
+\n\
+Options:\n\
+  --help              show this help\n\
+  -v, -vv             tar verbose",
+                          prog_short, command_name);
+
+  if (argc < 2) {
+    show_help();
+    exit(EXIT_FAILURE);
+  }
+
+  static struct {
+    char *name;
+    char *short_name;
+    char *description;
+    int *value;
+  } install_options;
+
+  static struct option long_options[] = {{"help", no_argument, NULL, 'h'},
+                                         {NULL, 0, NULL, 0}}; // End mark
+  int c;
+  while ((c = getopt_long(argc, argv, "hvb:w:k:q:", long_options, NULL)) !=
+         -1) {
+    // printf("optind=%d\n", optind);
+    switch (c) {
+    case 0:
+      printf("longopt[%d]=%s, %s\n", optind, long_options[optind].name, optarg);
+      break;
+    case 'h':
+      fprintf(stderr, "%s", help_info);
+      break;
+    default:
+      abort();
+    }
+  }
+
+  if (argc - optind == 1) {
+    if (access(argv[optind], F_OK) != 0) {
+      // login_options.rootfs = argv[optind];
+      printf("dir %s to be created\n", argv[optind]);
+    } else {
+      fprintf(stderr, "%s:%s: Dir '%s' already exists.\n", prog_path,
+              command_name, argv[optind]);
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    fprintf(stderr, "wrong arguments\n");
+    exit(EXIT_FAILURE);
+  }
+
   return 0;
 }
 
-void show_login_help() {
-  fprintf(stderr, "\
+int command_login(int argc, char *argv[]) {
+  help_info = my_asprintf("\
 Login into an installed rootfs.\n\
 \n\
 Usage:\n\
@@ -55,16 +112,14 @@ PRoot relavent options:\n\
   -q, --qemu\n\
   -k, --kernel-release\n\
 ",
-          prog_short, command_name, prog_short, command_name);
-}
+                          prog_short, command_name, prog_short, command_name);
 
-int command_login(int argc, char *argv[]) {
   if (is_verbose) {
     list_string_array(argc, argv, "argv");
   }
   command_name = "login";
   if (argc < 2) {
-    show_login_help();
+    show_help();
     return 0;
   }
 
@@ -131,7 +186,7 @@ int command_login(int argc, char *argv[]) {
       printf("longopt[%d]=%s, %s\n", optind, long_options[optind].name, optarg);
       break;
     case 'h':
-      show_login_help();
+      show_help();
       break;
     case 'v':
       printf("Version information.\n");
@@ -168,7 +223,7 @@ int command_login(int argc, char *argv[]) {
 
   // list_array(split_token_index, argv, "getopt_long");
   // printf("optind[%d]=%s\n", optind, argv[optind]);
-  if (optind == split_token_index - 1) {
+  if (split_token_index - optind == 1) {
     if (access(argv[optind], R_OK) == 0) {
       login_options.rootfs = argv[optind];
     } else {
@@ -293,8 +348,11 @@ int command_archive(int argc, char *argv[]) {
   return 0;
 }
 
-void show_help() {
-  fprintf(stderr, "\
+int main(int argc, char *argv[]) {
+  prog_path = argv[0];
+  prog_short = basename(prog_path);
+
+  help_info = my_asprintf("\
 %s super charges PRoot.\n\
 \n\
 Usage:\n\
@@ -315,12 +373,7 @@ Commands:\n\
 Related environment variables:\n\
   PROOT               path to proot\n\
 ",
-          prog_short, prog_short, prog_short);
-}
-
-int main(int argc, char *argv[]) {
-  prog_path = argv[0];
-  prog_short = basename(prog_path);
+                          prog_short, prog_short, prog_short);
 
   if (argc < 2) {
     show_help();
@@ -350,15 +403,18 @@ int main(int argc, char *argv[]) {
 
       if (strcmp("install", command_name) == 0) {
         command_install(forwarded_argc, forwarded_argv);
+        // return 0;
       } else if (strcmp("login", command_name) == 0) {
         command_login(forwarded_argc, forwarded_argv);
+        // return 0;
       } else if (strcmp("archive", command_name) == 0) {
         command_archive(forwarded_argc, forwarded_argv);
+        // return 0;
       } else {
         fprintf(stderr, "%s: Unknown command '%s'\n", prog_path, command_name);
         exit(EXIT_FAILURE);
       }
-      break;
+      return 0;
     }
   }
 
