@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
 
   for (int i = 1; i < argc; i++) {
     switch (argv[i][0]) {
-    // // Empty string is passed as 0
+    // // Empty string argument is passed as 0
     // case 0:
     //   break;
     case '-':
