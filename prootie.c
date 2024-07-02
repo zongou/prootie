@@ -50,7 +50,7 @@ Usage:\n\
   %s %s [OPTION...] [ROOTFS_DIR] -- [COMMAND] ...\n\
 \n\
 Options:\n\
-  --help              show this help\n\
+  -h, --help          show this help\n\
   --host-utils        enhances anotherterm & termux\n\
   --                  run commands within rootfs\n\
   \n\
@@ -312,8 +312,8 @@ Usage:\n\
   %s [COMMAND] --help\n\
 \n\
 Options:\n\
-  --help              show this help\n\
-  -v                  print more information\n\
+  -h, --help          show this help\n\
+  -v, --verbose       print more information\n\
 \n\
 Commands:\n\
   install             install rootfs\n\
@@ -338,12 +338,18 @@ int main(int argc, char *argv[]) {
 
   for (int i = 1; i < argc; i++) {
     switch (argv[i][0]) {
+    // // Empty string is passed as 0
+    // case 0:
+    //   break;
     case '-':
-      printf("option\n");
-      switch (argv[i][1]) {
-      case 'v':
+      if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
         is_verbose = 1;
-        break;
+      } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+        show_help();
+        exit(EXIT_SUCCESS);
+      } else {
+        fprintf(stderr, "%s: Unknown option '%s'\n", prog_path, argv[i]);
+        exit(EXIT_FAILURE);
       }
       break;
     default:

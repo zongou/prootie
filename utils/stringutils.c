@@ -7,15 +7,15 @@
 
 char **strlist_new() { return calloc(1, sizeof(char *)); }
 
-void log_print(const char *format, ...) {
-  extern int is_verbose;
-  if (is_verbose) {
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-  }
-}
+// void log_print(const char *format, ...) {
+//   extern int is_verbose;
+//   if (is_verbose) {
+//     va_list args;
+//     va_start(args, format);
+//     vfprintf(stderr, format, args);
+//     va_end(args);
+//   }
+// }
 
 int strlist_len(char **str_list) {
   int i = 0;
