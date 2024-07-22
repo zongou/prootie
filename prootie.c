@@ -694,6 +694,10 @@ PRoot relavent options:\n\
       if (access("/apex", F_OK) == 0) {
         strlist_addl(&proot_argv, "--bind=/apex", NULL);
       }
+      if (access("/linkerconfig/ld.config.txt", F_OK) == 0) {
+        strlist_addl(&proot_argv, "--bind=/linkerconfig/ld.config.txt", NULL);
+      }
+
       if (is_anotherterm()) {
         putenv(my_asprintf("TERMSH_UID=%d", getuid()));
         strlist_addl(&proot_argv,
