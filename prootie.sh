@@ -633,8 +633,16 @@ PRoot relavent options:
 	if _opt_is_host_utils; then
 		if is_android; then
 			## For anotherterm termsh
-			test -d "/system" && set -- "$@" "--bind=/system"
-			test -d "/apex" && set -- "$@" "--bind=/apex"
+			if test -d "/system"; then
+				set -- "$@" "--bind=/system"
+			fi
+			if test -d "/apex"; then
+				set -- "$@" "--bind=/apex"
+			fi
+			if test -e "/linkerconfig/ld.config.txt"; then
+				set -- "$@" "--bind=/linkerconfig/ld.config.txt"
+			fi
+
 			## https://green-green-avk.github.io/AnotherTerm-docs/local-shell-utility.html
 			if is_anotherterm; then
 				export TERMSH_UID="${USER_ID:-$(id -u)}"
