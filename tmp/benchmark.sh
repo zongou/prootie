@@ -9,7 +9,7 @@ hyperfine \
 	--max-runs 1000 \
 	--export-markdown "${result_md}" \
 	"proot-distro login alpine -- /bin/sh -lc pwd" \
-	"./prootie.sh login alpine -- /bin/sh -lc pwd" \
-	"./prootie login alpine -- /bin/sh -lc pwd"
+	"./prootie.sh login distros/alpine -- /bin/sh -lc pwd" \
+	"./prootie login distros/alpine -- /bin/sh -lc pwd"
 
 echo "Result file: ${result_md}"

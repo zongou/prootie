@@ -2,26 +2,9 @@ a.out
 prootie
 benchmark_result.md
 
-# Distros
-alamalinux*
-alpine*
-alt*
-amazonlinux*
-archlinux*
-busybox*
-centos*
-debian*
-devuan*
-fedora*
-gentoo*
-kali*
-openeuler*
-opensuse*
-openwrt*
-oracle*
-rockylinux*
-ubuntu*
-voidlinux*
+# Storing data
+distros
+backups
 
 # Tmp dirs
 .tmp*
