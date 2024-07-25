@@ -69,9 +69,8 @@ menu_install() {
 	*)
 		meta="${lxc_mirror}/meta/1.0/index-user"
 
-		if command -v curl >/dev/null; then
-			dl_cmd="curl -SsLk"
-		elif command -v wget >/dev/null; then
+		dl_cmd="curl -SsLk"
+		if ! command -v curl >/dev/null && command -v wget >/dev/null; then
 			dl_cmd="wget -qo-"
 		fi
 
