@@ -6,19 +6,20 @@ is_termux() { test "${TERMUX_VERSION+1}"; }
 is_anotherterm() { echo "${APP_ID-}" | grep -q "anotherterm"; }
 
 PROOTIE="${PROOTIE-./prootie}"
+DISTROS_DIR="${DISTROS_DIR-./distros}"
 version=3.20.1
-rootfs=./alpine
+rootfs="${DISTROS_DIR}/alpine"
 
+mkdir -p "${DISTROS_DIR}"
 arch=$(uname -m)
 version_main=$(echo "${version}" | grep -Eo "^[0-9]\.[0-9]+")
 archive_name=alpine-minirootfs-${version}-${arch}.tar.gz
 archive_path="${TMPDIR-/tmp}/${archive_name}"
 archive_url=https://dl-cdn.alpinelinux.org/alpine/v${version_main}/releases/${arch}/${archive_name}
 
-if command -v curl >/dev/null; then
-	dl_cmd="curl -Lk"
-elif command -v wget >/dev/null; then
-	dl_cmd="wget -o-"
+dl_cmd="curl -SsLk"
+if ! command -v curl >/dev/null && command -v wget >/dev/null; then
+	dl_cmd="wget -qo-"
 fi
 
 if [ ! -f "${archive_path}" ]; then
