@@ -1,6 +1,7 @@
 /*
 Note: PROOT_L2S_DIR must be absolute path, and it only affects hard link
 creation.
+PROOT_NO_SECCOMP=1
  */
 
 #include <getopt.h>
@@ -34,6 +35,7 @@ char *program;
 char *help_info;
 char *command;
 char *rootfs_dir;
+int link2symlink_default;
 
 int is_android() { return access("/system/bin/app_process", F_OK) == 0; }
 int is_termux() { return getenv("TERMUX_VERSION") != NULL; }
@@ -519,7 +521,7 @@ Options:\n\
 PRoot relavent options:\n\
   -b, --bind, -m, --mount\n\
   --no-kill-on-exit\n\
-  --no-link2symlink\n\
+  --link2symlink, --no-link2symlink\n\
   --no-sysvipc\n\
   --fix-low-ports\n\
   -q, --qemu\n\
@@ -543,7 +545,7 @@ PRoot relavent options:\n\
 
   options.kill_on_exit = 1;
   options.bindings = NULL;
-  options.link2symlink = 1;
+  options.link2symlink = link2symlink_default;
   options.fix_low_ports = 0;
   options.cwd = "/root";
   options.sysvipc = 1;
@@ -555,6 +557,7 @@ PRoot relavent options:\n\
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
       {"no-kill-on-exit", no_argument, &options.kill_on_exit, 0},
+      {"link2symlink", no_argument, &options.link2symlink, 1},
       {"no-link2symlink", no_argument, &options.link2symlink, 0},
       {"fix-low-ports", no_argument, &options.fix_low_ports, 1},
       {"bind", required_argument, NULL, 'b'},
@@ -893,7 +896,7 @@ Tar relavent options:\n\
 
   set_proot_path(&proot_argv);
   strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), "--root-id",
-               "--link2symlink", "--cwd=/", "/bin/tar", NULL);
+               "--cwd=/", "/bin/tar", NULL);
 
   if (options.tar_is_verbose) {
     strlist_addl(&proot_argv, "-v", NULL);
@@ -928,6 +931,10 @@ int main(int argc, char *argv[]) {
   // Disable automatic error messages from getopt_long
   // extern int opterr;
   opterr = 0;
+  link2symlink_default = 0;
+  if (is_android()) {
+    link2symlink_default = 1;
+  }
 
   help_info = my_asprintf("\
 Supercharges your PRoot experience.\n\
