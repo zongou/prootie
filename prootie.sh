@@ -435,7 +435,7 @@ Options:
 PRoot relavent options:
   -b, --bind, -m, --mount
   --no-kill-on-exit
-  --no-link2symlink
+  --link2symlink, --no-link2symlink
   --no-sysvipc
   --fix-low-ports
   -q, --qemu
@@ -448,7 +448,10 @@ PRoot relavent options:
 
 	## PRoot relavent options
 	_opt_is_kill_on_exit() { true; }
-	_opt_is_link2symlink() { true; }
+	_opt_is_link2symlink() { false; }
+	if is_android; then
+		_opt_is_link2symlink() { true; }
+	fi
 	_opt_is_sysvipc() { true; }
 	_opt_is_fix_low_ports() { false; }
 
@@ -498,6 +501,10 @@ PRoot relavent options:
 			--no-kill-on-exit)
 				shift
 				_opt_is_kill_on_exit() { false; }
+				;;
+			--link2symlink)
+				shift
+				_opt_is_link2symlink() { true; }
 				;;
 			--no-link2symlink)
 				shift

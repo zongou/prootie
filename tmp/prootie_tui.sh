@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-PROOTIE="${PROOTIE:-./prootie}"
+PROOTIE="${PROOTIE:-prootie}"
 DISTROS_DIR="${DISTROS_DIR-./distros}"
 BACKUPS_DIR="${BACKUPS_DIR-./backups}"
 

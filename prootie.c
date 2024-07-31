@@ -1,6 +1,7 @@
 /*
 Note: PROOT_L2S_DIR must be absolute path, and it only affects hard link
 creation.
+PROOT_NO_SECCOMP=1
  */
 
 #include <getopt.h>
@@ -519,7 +520,7 @@ Options:\n\
 PRoot relavent options:\n\
   -b, --bind, -m, --mount\n\
   --no-kill-on-exit\n\
-  --no-link2symlink\n\
+  --link2symlink, --no-link2symlink\n\
   --no-sysvipc\n\
   --fix-low-ports\n\
   -q, --qemu\n\
@@ -543,7 +544,10 @@ PRoot relavent options:\n\
 
   options.kill_on_exit = 1;
   options.bindings = NULL;
-  options.link2symlink = 1;
+  options.link2symlink = 0;
+  if (is_android()) {
+    options.link2symlink = 1;
+  }
   options.fix_low_ports = 0;
   options.cwd = "/root";
   options.sysvipc = 1;
@@ -555,6 +559,7 @@ PRoot relavent options:\n\
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
       {"no-kill-on-exit", no_argument, &options.kill_on_exit, 0},
+      {"link2symlink", no_argument, &options.link2symlink, 1},
       {"no-link2symlink", no_argument, &options.link2symlink, 0},
       {"fix-low-ports", no_argument, &options.fix_low_ports, 1},
       {"bind", required_argument, NULL, 'b'},
