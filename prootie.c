@@ -85,31 +85,47 @@ Usage:\n\
 \n\
 Options:\n\
   --help              show this help\n\
-  -v, -vv             tar verbose\n\
+\n\
+Tar relavent options:\n\
+  -v, --verbose\n\
+  --exclude\n\
 ",
                           program, command);
   SHOW_HELP
 
   static struct {
-    int is_verbose;
+    int tar_is_verbose;
+    char **tar_excludes;
   } options;
 
-  options.is_verbose = 0;
+  options.tar_is_verbose = 0;
+  options.tar_excludes = NULL;
 
   int c;
+  int longopt_index;
 
-  static struct option long_options[] = {{"help", no_argument, NULL, 'h'},
-                                         {"verbose", no_argument, NULL, 'v'},
-                                         {NULL, 0, NULL, 0}};
+  static struct option long_options[] = {
+      {"help", no_argument, NULL, 'h'},
+      {"verbose", no_argument, NULL, 'v'},
+      {"exclude", required_argument, NULL, 0},
+      {NULL, 0, NULL, 0}};
 
-  // Parse options
-  while ((c = getopt_long(argc, argv, "hv", long_options, NULL)) != -1) {
+  while ((c = getopt_long(argc, argv, "hv", long_options, &longopt_index)) !=
+         -1) {
     switch (c) {
+    case 0:
+      if (strcmp("exclude", long_options[longopt_index].name) == 0) {
+        if (options.tar_excludes == NULL) {
+          options.tar_excludes = strlist_new();
+        }
+        strlist_addl(&options.tar_excludes, optarg, NULL);
+      }
+      break;
     case 'h':
       fputs(help_info, stderr);
       return EXIT_SUCCESS;
     case 'v':
-      options.is_verbose = 1;
+      options.tar_is_verbose = 1;
       break;
     case '?':
       fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
@@ -151,10 +167,17 @@ Options:\n\
     return EXIT_FAILURE;
   }
 
-  if (options.is_verbose) {
+  if (options.tar_is_verbose) {
     strlist_addl(&proot_argv, "-v", NULL);
   }
+
   strlist_addl(&proot_argv, "-C", rootfs_dir, "-x", NULL);
+  if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
+    for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
+      strlist_addl(&proot_argv,
+                   my_asprintf("--exclude=%s", options.tar_excludes[i]), NULL);
+    }
+  }
 
   pid_t pid;
   pid = fork();
@@ -527,7 +550,7 @@ PRoot relavent options:\n\
   options.host_utils = 0;
 
   int c;
-  int long_options_index;
+  int longopt_index;
 
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
@@ -540,18 +563,18 @@ PRoot relavent options:\n\
       {"qemu", required_argument, NULL, 'q'},
       {"host-utils", no_argument, &options.host_utils, 1},
       {"env", required_argument, NULL, 0},
-      {NULL, 0, NULL, 0}}; // End mark
+      {NULL, 0, NULL, 0}};
 
   while ((c = getopt_long(argc, argv, "hb:w:k:q:", long_options,
-                          &long_options_index)) != -1) {
+                          &longopt_index)) != -1) {
     switch (c) {
     case 0:
       /* If this option set a flag, do nothing else now. */
-      // if (long_options[long_options_index].flag == 0) {
-      //   printf("long_option[%d]:%s=%s", long_options_index,
-      //          long_options[long_options_index].name, optarg);
+      // if (long_options[longopt_index].flag == 0) {
+      //   printf("long_option[%d]:%s=%s", longopt_index,
+      //          long_options[longopt_index].name, optarg);
       // }
-      if (strcmp("env", long_options[long_options_index].name) == 0) {
+      if (strcmp("env", long_options[longopt_index].name) == 0) {
         if (options.env == NULL) {
           options.env = strlist_new();
         }
@@ -793,31 +816,47 @@ Usage:\n\
 \n\
 Options:\n\
   --help              show this help\n\
-  -v, -vv             tar verbose\n\
+\n\
+Tar relavent options:\n\
+  -v, --verbose\n\
+  --exclude\n\
 ",
                           program, command);
   SHOW_HELP
 
   static struct {
-    int is_verbose;
+    int tar_is_verbose;
+    char **tar_excludes;
   } options;
 
-  options.is_verbose = 0;
+  options.tar_is_verbose = 0;
+  options.tar_excludes = NULL;
 
   int c;
+  int longopt_index = 0;
 
-  static struct option long_options[] = {{"help", no_argument, NULL, 'h'},
-                                         {"verbose", no_argument, NULL, 'v'},
-                                         {NULL, 0, NULL, 0}};
+  static struct option long_options[] = {
+      {"help", no_argument, NULL, 'h'},
+      {"verbose", no_argument, NULL, 'v'},
+      {"exclude", required_argument, NULL, 0},
+      {NULL, 0, NULL, 0}};
 
-  // Parse options
-  while ((c = getopt_long(argc, argv, "hv", long_options, NULL)) != -1) {
+  while ((c = getopt_long(argc, argv, "hv", long_options, &longopt_index)) !=
+         -1) {
     switch (c) {
+    case 0:
+      if (strcmp("exclude", long_options[longopt_index].name) == 0) {
+        if (options.tar_excludes == NULL) {
+          options.tar_excludes = strlist_new();
+        }
+        strlist_addl(&options.tar_excludes, optarg, NULL);
+      }
+      break;
     case 'h':
       fputs(help_info, stderr);
       return EXIT_SUCCESS;
     case 'v':
-      options.is_verbose = 1;
+      options.tar_is_verbose = 1;
       break;
     case '?':
       fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
@@ -841,6 +880,12 @@ Options:\n\
     return EXIT_FAILURE;
   }
 
+  if (isatty(STDOUT_FILENO)) {
+    fprintf(stderr, "%s: Refusing to write archive contents to terminal\n",
+            program);
+    exit(EXIT_FAILURE);
+  }
+
   char **proot_argv = strlist_new();
   char **proot_envp = strlist_new();
 
@@ -849,7 +894,8 @@ Options:\n\
   set_proot_path(&proot_argv);
   strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), "--root-id",
                "--link2symlink", "--cwd=/", "/bin/tar", NULL);
-  if (options.is_verbose) {
+
+  if (options.tar_is_verbose) {
     strlist_addl(&proot_argv, "-v", NULL);
   }
 
@@ -857,6 +903,14 @@ Options:\n\
   strlist_addl(&proot_argv, "--exclude=.*sh_history", NULL);
   strlist_addl(&proot_argv, my_asprintf("--exclude=" FMT_PROOT_DATA_DIR, "."),
                NULL);
+
+  if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
+    for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
+      strlist_addl(&proot_argv,
+                   my_asprintf("--exclude=%s", options.tar_excludes[i]), NULL);
+    }
+  }
+
   strlist_addl(&proot_argv, "-c", ".", NULL);
 
   if (is_verbose) {

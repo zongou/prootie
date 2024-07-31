@@ -70,9 +70,14 @@ Usage:
 
 Options:
   --help              show this help
-  -v, -vv             tar verbose\
+
+Tar relavent options:
+  -v, --verbose
+  --exclude\
 "
 	}
+
+	tar_is_verbose() { false; }
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -81,8 +86,16 @@ Options:
 				_show_help
 				exit
 				;;
-			-v | -vv)
-				_opt_tar_verbose="$1"
+			-v | --verbose)
+				shift
+				tar_is_verbose() { true; }
+				;;
+			--exclude=*)
+				if test "${tar_excludes+1}"; then
+					tar_excludes=$(printf "%s\n%s\n" "${tar_excludes}" "$(echo "$1" | base64)")
+				else
+					tar_excludes=$(echo "$1" | base64)
+				fi
 				shift
 				;;
 			-*) error_exit_unknown_option "$1" ;;
@@ -126,7 +139,18 @@ Options:
 	mkdir -p "${_opt_rootfs_dir}"
 	set_proot_path
 	set_proot_env "${_opt_rootfs_dir}"
-	set -- --link2symlink --root-id tar ${_opt_tar_verbose+${_opt_tar_verbose}} -C "${_opt_rootfs_dir}" -x
+	set -- --link2symlink --root-id tar
+
+	if tar_is_verbose; then
+		set -- "$@" -v
+	fi
+
+	set -- "$@" -C "${_opt_rootfs_dir}" -x
+
+	if test "${tar_excludes+1}"; then
+		shift -- "$@" $(echo "${tar_excludes}" | base64 -d)
+	fi
+
 	vmsg "cmd=${PROOT} $*"
 	"${PROOT}" "$@"
 
@@ -435,15 +459,13 @@ PRoot relavent options:
 			case "$1" in
 			--)
 				shift
-				if test $# -gt 0; then
-					_opt_args_base64="$(
-						while test $# -gt 0; do
-							printf "%s\n" "$(echo "$1" | base64 -w1024000000)"
-							shift
-						done
-					)"
-					shift $#
-				fi
+				args=$(
+					while test $# -gt 0; do
+						echo "$1" | base64
+						shift
+					done
+				)
+				shift $#
 				;;
 			-h | --help)
 				_show_help
@@ -730,9 +752,14 @@ Usage:
 
 Options:
   --help              show this help
-  -v, -vv             tar verbose\
+
+Tar relavent options:
+  -v, --verbose
+  --exclude\
 "
 	}
+
+	tar_is_verbose() { false; }
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -741,8 +768,16 @@ Options:
 				_show_help
 				exit
 				;;
-			-v | -vv)
-				_opt_tar_verbose="$1"
+			-v | --verbose)
+				shift
+				tar_is_verbose() { true; }
+				;;
+			--exclude=*)
+				if test "${tar_excludes+1}"; then
+					tar_excludes=$(printf "%s\n%s\n" "${tar_excludes}" "$(echo "$1" | base64)")
+				else
+					tar_excludes=$(echo "$1" | base64)
+				fi
 				shift
 				;;
 			-*) error_exit_unknown_option "$1" ;;
@@ -769,19 +804,8 @@ Options:
 		error_exit "rootfs not set"
 	fi
 
-	## Do not write to terminal
 	if test -t 1; then
-		error_exit "Do not write to terminal"
-	fi
-
-	## Do not archive when rootfs is in use.
-	PROOT_SESSIONS_DIR=$(get_proot_conf "${_opt_rootfs_dir}" proot_sessions_dir)
-	if test -d "${PROOT_SESSIONS_DIR}"; then
-		find "${PROOT_SESSIONS_DIR}" -maxdepth 1 -mindepth 1 -type d | while IFS= read -r dir; do
-			if kill -0 "$(basename "${dir}")" 2>/dev/null; then
-				error_exit "rootfs dir [${_opt_rootfs_dir}] is in use"
-			fi
-		done
+		error_exit "Refusing to write archive contents to terminal"
 	fi
 
 	set -- "$@" "--rootfs=${_opt_rootfs_dir}"
@@ -790,8 +814,8 @@ Options:
 	set -- "$@" "--cwd=/"
 	set -- "$@" "/bin/tar"
 
-	if test "${_opt_tar_verbose+1}"; then
-		set -- "$@" "${_opt_tar_verbose}"
+	if tar_is_verbose; then
+		set -- "$@" "-v"
 	fi
 
 	set -- "$@" "--exclude=./tmp/*"
@@ -800,9 +824,13 @@ Options:
 	set -- "$@" "--exclude=./etc/profile.d/proot.sh"
 	set -- "$@" "-c" "."
 
+	if test "${tar_excludes+1}"; then
+		set -- "$@" $(echo "${tar_excludes}" | base64 -d)
+	fi
+
 	set_proot_path
-	vmsg "cmd=${PROOT} $*"
 	unset LD_PRELOAD
+	vmsg "cmd=${PROOT} $*"
 	exec "${PROOT}" "$@"
 }
 
