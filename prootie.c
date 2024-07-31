@@ -22,8 +22,7 @@ creation.
 #define FMT_PROOT_FAKEROOTFS_DIR "%s/.proot/rootfs"
 #define HOT_UTILS "host_utils.sh"
 
-#define ROOTFS_NOT_SET                                                         \
-  fprintf(stderr, "%s:%s: Rootfs not set.\n", program, command);
+#define ROOTFS_NOT_SET fprintf(stderr, "%s: Rootfs not set.\n", program);
 #define SHOW_HELP                                                              \
   if (argc < 2) {                                                              \
     fputs(help_info, stderr);                                                  \
@@ -47,7 +46,7 @@ void set_proot_path(char ***strlistp) {
   } else if ((proot_path = get_tool_path("proot")) != NULL) {
     strlist_addl(strlistp, proot_path, NULL);
   } else {
-    fprintf(stderr, "Cannot find proot in PATH and env PROOT not set.\n");
+    fprintf(stderr, "%s: Cannot find proot in PATH and env\n", program);
     exit(EXIT_FAILURE);
   }
 }
@@ -113,8 +112,7 @@ Options:\n\
       options.is_verbose = 1;
       break;
     case '?':
-      fprintf(stderr, "%s:%s: Unknown option '%s'.\n", program, command,
-              argv[optind - 1]);
+      fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
       return EXIT_FAILURE;
       break;
     default:
@@ -128,7 +126,8 @@ Options:\n\
       rootfs_dir = realpath(argv[optind], NULL);
       optind = optind + 1;
     } else {
-      fprintf(stderr, "Rootfs '%s' already exists.\n", argv[optind]);
+      fprintf(stderr, "%s: Rootfs '%s' already exists.\n", program,
+              argv[optind]);
       return EXIT_FAILURE;
     }
   } else {
@@ -148,7 +147,7 @@ Options:\n\
   if ((tar_path = get_tool_path("tar")) != NULL) {
     strlist_addl(&proot_argv, tar_path, NULL);
   } else {
-    fprintf(stderr, "Cannot find tar in PATH\n");
+    fprintf(stderr, "%s: Cannot find tar in PATH\n", program);
     return EXIT_FAILURE;
   }
 
@@ -178,15 +177,15 @@ Options:\n\
     waitpid(pid, &status, 0);
     if (WIFEXITED(status)) {
       if (WEXITSTATUS(status) != 0) {
-        fprintf(stderr, "Child exited with status: %d\n", status);
-        fprintf(stderr, "%s:%s: Failed.\n", program, command);
-        fprintf(stderr, "%s:%s: Cleaning up...\n", program, command);
+        fprintf(stderr, "%s: Child exited with status: %d\n", program, status);
+        fprintf(stderr, "%s: Failed.\n", program);
+        fprintf(stderr, "%s: Cleaning up...\n", program);
         system(my_asprintf("chmod +rw -R %s", rootfs_dir));
         system(my_asprintf("rm -rf %s", rootfs_dir));
         return EXIT_FAILURE;
       }
     } else {
-      fprintf(stderr, "Child did not terminate normally.\n");
+      fprintf(stderr, "%s: Child did not terminate normally.\n", program);
       return EXIT_FAILURE;
     }
   }
@@ -579,8 +578,7 @@ PRoot relavent options:\n\
       options.qemu = optarg;
       break;
     case '?':
-      fprintf(stderr, "%s:%s: Unknown option '%s'.\n", program, command,
-              argv[optind - 1]);
+      fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
       return EXIT_FAILURE;
       break;
     default:
@@ -594,8 +592,7 @@ PRoot relavent options:\n\
       rootfs_dir = realpath(argv[optind], NULL);
       optind = optind + 1;
     } else {
-      fprintf(stderr, "%s:%s: Rootfs '%s' not exists.\n", program, command,
-              argv[optind]);
+      fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
       return EXIT_FAILURE;
     }
   } else {
@@ -823,8 +820,7 @@ Options:\n\
       options.is_verbose = 1;
       break;
     case '?':
-      fprintf(stderr, "%s:%s: Unknown option '%s'.\n", program, command,
-              argv[optind - 1]);
+      fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
       return EXIT_FAILURE;
       break;
     default:
@@ -837,7 +833,8 @@ Options:\n\
       rootfs_dir = realpath(argv[optind], NULL);
       optind = optind + 1;
     } else {
-      fprintf(stderr, "Rootfs '%s' not exists.\n", argv[optind]);
+      fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
+      return EXIT_FAILURE;
     }
   } else {
     ROOTFS_NOT_SET

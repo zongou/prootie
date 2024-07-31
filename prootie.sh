@@ -7,7 +7,7 @@ SCRIPT_PID="$$"
 msg() { printf "%s\n" "$*" >&2; }
 info() { printf "%s\n" "${PROGRAM+${PROGRAM}:}$*" >&2; }
 vmsg() { if script_opt_is_verbose; then msg "${PROGRAM}:${COMMAND}:$*"; fi; }
-error_exit() { printf "%s%s %s\n" "${PROGRAM+${PROGRAM}:}" "${COMMAND+${COMMAND}:}" "$*" >&2 && exit 1; }
+error_exit() { printf "%s: %s\n" "${PROGRAM}" "$*" >&2 && exit 1; }
 error_exit_unknown_option() { error_exit "Unknown option '$*'"; }
 error_exit_argument_error() { error_exit "Argument error: '$*'"; }
 
@@ -704,10 +704,8 @@ PRoot relavent options:
 	fi
 
 	## Start user command or default shell
-	if test "${_opt_args_base64+1}"; then
-		for line in ${_opt_args_base64}; do
-			set -- "$@" "$(echo "$line" | base64 -d)"
-		done
+	if test "${args+1}"; then
+		set -- "$@" $(echo "${args}" | base64 -d)
 	else
 		## If no argument command, login to root default shell
 		if test -e "${_opt_rootfs_dir}/etc/passwd"; then
