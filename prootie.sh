@@ -628,7 +628,8 @@ PRoot relavent options:
 
 	## Map static fake rootfs files
 	proot_fakerootfs_dir=$(get_proot_conf "${_opt_rootfs_dir}" proot_fakerootfs_dir)
-	for f in $(cd "${proot_fakerootfs_dir}" && find . -type f -exec sh -c 'printf "%s" "$1"|cut -b 2-' _ {} \;); do
+	prefix=$(echo "${proot_fakerootfs_dir}" | wc -m)
+	for f in $(find "${proot_fakerootfs_dir}" -type f | cut -b"${prefix}"-); do
 		case "${f}" in
 		/etc/profile.d/host_utils.sh)
 			if _opt_is_host_utils; then
