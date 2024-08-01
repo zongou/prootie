@@ -623,6 +623,11 @@ PRoot relavent options:\n\
       fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
       return EXIT_FAILURE;
     }
+
+    if (strcmp("--", argv[1]) != 0 && optind < argc) {
+      printf("%s: Excessive argument '%s'.\n", program, argv[optind]);
+      return EXIT_FAILURE;
+    }
   } else {
     ROOTFS_NOT_SET
     return EXIT_FAILURE;

@@ -462,13 +462,15 @@ PRoot relavent options:
 			case "$1" in
 			--)
 				shift
-				args=$(
-					while test $# -gt 0; do
-						echo "$1" | base64
-						shift
-					done
-				)
-				shift $#
+				if test $# -gt 0; then
+					args=$(
+						while test $# -gt 0; do
+							echo "$1" | base64
+							shift
+						done
+					)
+					shift $#
+				fi
 				;;
 			-h | --help)
 				_show_help
@@ -537,7 +539,7 @@ PRoot relavent options:
 				if ! test "${_opt_rootfs_dir+1}"; then
 					_opt_rootfs_dir="$1"
 				else
-					error_exit_argument_error "$@"
+					error_exit "Excessive argument 'env'."
 				fi
 				shift
 				;;
