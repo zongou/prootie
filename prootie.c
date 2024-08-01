@@ -505,22 +505,22 @@ int command_login(int argc, char *argv[]) {
 Start login shell of the specific rootfs.\n\
 \n\
 Usage:\n\
-  ## Login default shell as root\n\
+  ## Start login shell as root\n\
   %s %s [OPTION...] [ROOTFS]\n\
   \n\
-  ## Login and run commands\n\
-  %s %s [OPTION...] [ROOTFS] -- [COMMAND] ...\n\
+  ## Execute a command\n\
+  %s %s [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]\n\
 \n\
 Options:\n\
   -h, --help          show this help\n\
   --host-utils        enable host utils\n\
   --env               set environment variables\n\
-  --                  run commands within rootfs\n\
-  \n\
+\n\
 PRoot relavent options:\n\
   -b, --bind, -m, --mount\n\
   --no-kill-on-exit\n\
-  --link2symlink, --no-link2symlink\n\
+  --link2symlink\n\
+  --no-link2symlink\n\
   --no-sysvipc\n\
   --fix-low-ports\n\
   -q, --qemu\n\

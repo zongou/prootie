@@ -420,22 +420,22 @@ command_login() {
 Start login shell of the specific rootfs.
 
 Usage:
-  ## Login default shell as root
+  ## Start login shell as root
   ${PROGRAM} ${COMMAND} [OPTION...] [ROOTFS]
   
-  ## Login and run commands
-  ${PROGRAM} ${COMMAND} [OPTION...] [ROOTFS] -- [COMMAND] ...
+  ## Execute a command
+  ${PROGRAM} ${COMMAND} [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]
 
 Options:
   -h, --help          show this help
   --host-utils        enable host utils
   --env               set environment variables
-  --                  run commands within rootfs
   
 PRoot relavent options:
   -b, --bind, -m, --mount
   --no-kill-on-exit
-  --link2symlink, --no-link2symlink
+  --link2symlink
+  --no-link2symlink
   --no-sysvipc
   --fix-low-ports
   -q, --qemu
