@@ -631,24 +631,18 @@ PRoot relavent options:
 	prefix=$(echo "${proot_fakerootfs_dir}" | wc -m)
 	for f in $(find "${proot_fakerootfs_dir}" -type f | cut -b"${prefix}"-); do
 		case "${f}" in
+		/proc/*)
+			if ! cat "${f}" >/dev/null 2>&1; then
+				set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
+			fi
+			;;
 		/etc/profile.d/host_utils.sh)
 			if _opt_is_host_utils; then
 				set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
 			fi
 			;;
-		/etc/*)
-			if ! cat "${_opt_rootfs_dir}${f}" >/dev/null 2>&1; then
-				if cat "${f}" >/dev/null 2>&1; then
-					set -- "$@" "--bind=${f}"
-				else
-					set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
-				fi
-			fi
-			;;
-		/proc/*)
-			if ! cat "${f}" >/dev/null 2>&1; then
-				set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
-			fi
+		*)
+			set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
 			;;
 		esac
 	done
