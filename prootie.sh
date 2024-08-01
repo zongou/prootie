@@ -3,6 +3,9 @@ set -eu
 
 PROGRAM="$(basename "$0")"
 
+1() { true; }
+0() { false; }
+
 msg() { printf "%s\n" "$*" >&2; }
 info() { printf "%s\n" "${PROGRAM+${PROGRAM}:}$*" >&2; }
 vmsg() { if script_opt_is_verbose; then msg "${PROGRAM}:${COMMAND}:$*"; fi; }
@@ -76,7 +79,7 @@ Tar relavent options:
 "
 	}
 
-	tar_is_verbose() { false; }
+	_opt_tar_is_verbose=0
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -87,7 +90,7 @@ Tar relavent options:
 				;;
 			-v | --verbose)
 				shift
-				tar_is_verbose() { true; }
+				_opt_tar_is_verbose=1
 				;;
 			--exclude=*)
 				if test "${tar_excludes+1}"; then
@@ -101,7 +104,7 @@ Tar relavent options:
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
 					if ! test -e "$1"; then
-						_opt_rootfs_dir="$1"
+						_opt_rootfs_dir="$(realpath "$1")"
 						shift
 					else
 						error_exit "Rootfs '$1' already exists."
@@ -140,7 +143,7 @@ Tar relavent options:
 	set_proot_env "${_opt_rootfs_dir}"
 	set -- --link2symlink --root-id tar
 
-	if tar_is_verbose; then
+	if ${_opt_tar_is_verbose}; then
 		set -- "$@" -v
 	fi
 
@@ -444,16 +447,13 @@ PRoot relavent options:
 	}
 
 	## Default option value
-	_opt_is_host_utils() { false; }
+	_opt_is_host_utils=0
 
 	## PRoot relavent options
-	_opt_is_kill_on_exit() { true; }
-	_opt_is_link2symlink() { false; }
-	if is_android; then
-		_opt_is_link2symlink() { true; }
-	fi
-	_opt_is_sysvipc() { true; }
-	_opt_is_fix_low_ports() { false; }
+	_opt_is_kill_on_exit=1
+	_opt_is_link2symlink=${link2symlink_default}
+	_opt_is_sysvipc=1
+	_opt_is_fix_low_ports=0
 
 	get_longopt_val() { echo "$1" | cut -d= -f2-; }
 
@@ -490,7 +490,7 @@ PRoot relavent options:
 				;;
 			--host-utils)
 				shift
-				_opt_is_host_utils() { true; }
+				_opt_is_host_utils=1
 				;;
 			--env | --env=*)
 				case "$1" in
@@ -502,23 +502,23 @@ PRoot relavent options:
 				;;
 			--no-kill-on-exit)
 				shift
-				_opt_is_kill_on_exit() { false; }
+				_opt_is_kill_on_exit=0
 				;;
 			--link2symlink)
 				shift
-				_opt_is_link2symlink() { true; }
+				_opt_is_link2symlink=1
 				;;
 			--no-link2symlink)
 				shift
-				_opt_is_link2symlink() { false; }
+				_opt_is_link2symlink=0
 				;;
 			--no-sysvipc)
 				shift
-				_opt_is_sysvipc() { false; }
+				_opt_is_sysvipc=0
 				;;
 			--fix-low-ports)
 				shift
-				_opt_is_fix_low_ports() { true; }
+				_opt_is_fix_low_ports=1
 				;;
 			-q | --qemu=*)
 				case "$1" in
@@ -537,7 +537,7 @@ PRoot relavent options:
 			-*) error_exit_unknown_option "$1" ;;
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
-					_opt_rootfs_dir="$1"
+					_opt_rootfs_dir="$(realpath "$1")"
 				else
 					error_exit "Excessive argument 'env'."
 				fi
@@ -573,7 +573,7 @@ PRoot relavent options:
 		set -- "$@" "--cwd=/root"
 	fi
 
-	if _opt_is_kill_on_exit; then
+	if ${_opt_is_kill_on_exit}; then
 		set -- "$@" "--kill-on-exit"
 	fi
 
@@ -583,12 +583,12 @@ PRoot relavent options:
 
 	set -- "$@" "--root-id"
 
-	if _opt_is_link2symlink; then
+	if ${_opt_is_link2symlink}; then
 		set -- "$@" "--link2symlink"
 	fi
 
 	if is_android; then
-		if _opt_is_sysvipc; then
+		if ${_opt_is_sysvipc}; then
 			set -- "$@" "--sysvipc"
 		fi
 	fi
@@ -602,7 +602,7 @@ PRoot relavent options:
 	fi
 
 	if is_android; then
-		if _opt_is_fix_low_ports; then
+		if ${_opt_is_fix_low_ports}; then
 			set -- "$@" "-P"
 		fi
 	fi
@@ -639,7 +639,7 @@ PRoot relavent options:
 			fi
 			;;
 		/etc/profile.d/host_utils.sh)
-			if _opt_is_host_utils; then
+			if ${_opt_is_host_utils}; then
 				set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
 			fi
 			;;
@@ -656,7 +656,7 @@ PRoot relavent options:
 	fi
 	set -- "$@" "--bind=${_opt_rootfs_dir}/tmp:/dev/shm"
 
-	if _opt_is_host_utils; then
+	if ${_opt_is_host_utils}; then
 		if is_android; then
 			## For anotherterm termsh
 			if test -d "/system"; then
@@ -716,7 +716,7 @@ PRoot relavent options:
 			set -- "$@" "COLORTERM=${COLORTERM}"
 		fi
 
-		if _opt_is_host_utils && is_anotherterm; then
+		if ${_opt_is_host_utils} && is_anotherterm; then
 			set -- "$@" "SHELL_SESSION_TOKEN=${SHELL_SESSION_TOKEN}"
 		fi
 
@@ -764,7 +764,7 @@ Tar relavent options:
 "
 	}
 
-	tar_is_verbose() { false; }
+	_opt_tar_is_verbose=0
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -775,7 +775,7 @@ Tar relavent options:
 				;;
 			-v | --verbose)
 				shift
-				tar_is_verbose() { true; }
+				_opt_tar_is_verbose=1
 				;;
 			--exclude=*)
 				if test "${tar_excludes+1}"; then
@@ -789,7 +789,7 @@ Tar relavent options:
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
 					if test -d "$1"; then
-						_opt_rootfs_dir="$1"
+						_opt_rootfs_dir="$(realpath "$1")"
 					else
 						error_exit "Rootfs '$1' not exists."
 					fi
@@ -815,11 +815,10 @@ Tar relavent options:
 
 	set -- "$@" "--rootfs=${_opt_rootfs_dir}"
 	set -- "$@" "--root-id"
-	set -- "$@" "--link2symlink"
 	set -- "$@" "--cwd=/"
 	set -- "$@" "/bin/tar"
 
-	if tar_is_verbose; then
+	if ${_opt_tar_is_verbose}; then
 		set -- "$@" "-v"
 	fi
 
@@ -864,6 +863,11 @@ Related environment variables:
   PROOT               path to proot\
 "
 	}
+
+	link2symlink_default=0
+	if is_android; then
+		link2symlink_default=1
+	fi
 
 	if test $# -eq 0; then
 		_show_help
