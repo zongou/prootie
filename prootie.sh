@@ -2,7 +2,6 @@
 set -eu
 
 PROGRAM="$(basename "$0")"
-SCRIPT_PID="$$"
 
 msg() { printf "%s\n" "$*" >&2; }
 info() { printf "%s\n" "${PROGRAM+${PROGRAM}:}$*" >&2; }
@@ -148,6 +147,7 @@ Tar relavent options:
 	set -- "$@" -C "${_opt_rootfs_dir}" -x
 
 	if test "${tar_excludes+1}"; then
+		# shellcheck disable=SC2046
 		shift -- "$@" $(echo "${tar_excludes}" | base64 -d)
 	fi
 
@@ -735,6 +735,7 @@ PRoot relavent options:
 
 	## Start user command or default shell
 	if test "${args+1}"; then
+		# shellcheck disable=SC2046
 		set -- "$@" $(echo "${args}" | base64 -d)
 	else
 		## If no argument command, login to root default shell
@@ -833,6 +834,7 @@ Tar relavent options:
 	set -- "$@" "-c" "."
 
 	if test "${tar_excludes+1}"; then
+		# shellcheck disable=SC2046
 		set -- "$@" $(echo "${tar_excludes}" | base64 -d)
 	fi
 
