@@ -839,6 +839,8 @@ Tar relavent options:\n\
   static struct {
     int tar_is_verbose;
     char **tar_excludes;
+    int rootfs_tar;
+    char *qemu;
   } options;
 
   options.tar_is_verbose = 0;
@@ -851,9 +853,11 @@ Tar relavent options:\n\
       {"help", no_argument, NULL, 'h'},
       {"verbose", no_argument, NULL, 'v'},
       {"exclude", required_argument, NULL, 0},
+      {"rootfs-tar", no_argument, &options.rootfs_tar, 1},
+      {"qemu", required_argument, NULL, 'q'},
       {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hv", long_options, &longopt_index)) !=
+  while ((c = getopt_long(argc, argv, "hvq:", long_options, &longopt_index)) !=
          -1) {
     switch (c) {
     case 0:
@@ -869,6 +873,9 @@ Tar relavent options:\n\
       return EXIT_SUCCESS;
     case 'v':
       options.tar_is_verbose = 1;
+      break;
+    case 'q':
+      options.qemu = optarg;
       break;
     case '?':
       fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
@@ -904,8 +911,14 @@ Tar relavent options:\n\
   set_proot_env(&proot_envp);
 
   set_proot_path(&proot_argv);
-  strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), "--root-id",
-               "--cwd=/", "/bin/tar", NULL);
+  if (options.rootfs_tar) {
+    strlist_addl(&proot_argv, my_asprintf("--qemu=%s", options.qemu), NULL);
+    strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir),
+                 "--root-id", "--cwd=/", "/bin/tar", NULL);
+  } else {
+    strlist_addl(&proot_argv, "--root-id", my_asprintf("--cwd=%s", rootfs_dir),
+                 get_tool_path("tar"), NULL);
+  }
 
   if (options.tar_is_verbose) {
     strlist_addl(&proot_argv, "-v", NULL);
@@ -915,6 +928,8 @@ Tar relavent options:\n\
   strlist_addl(&proot_argv, "--exclude=.*sh_history", NULL);
   strlist_addl(&proot_argv, my_asprintf("--exclude=" FMT_PROOT_DATA_DIR, "."),
                NULL);
+  if (options.qemu != NULL) {
+    strlist_addl(&proot_argv, "--exclude=./host-rootfs", NULL);}
 
   if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
     for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
@@ -926,6 +941,7 @@ Tar relavent options:\n\
   strlist_addl(&proot_argv, "-c", ".", NULL);
 
   if (is_verbose) {
+    strlist_list(proot_envp, "proot_envp");
     strlist_list(proot_argv, "proot_argv");
   }
   execve(proot_argv[0], proot_argv, proot_envp);

@@ -17,6 +17,8 @@ is_android() { test -f /system/bin/linker; }
 is_termux() { test "${TERMUX_VERSION+1}"; }
 is_anotherterm() { echo "${APP_ID-}" | grep -q "anotherterm"; }
 
+get_longopt_val() { echo "$1" | cut -d= -f2-; }
+
 ## [ROOTFS] [ITERM]
 get_proot_conf() {
 	case "$2" in
@@ -456,8 +458,6 @@ PRoot relavent options:
 	_opt_is_sysvipc=1
 	_opt_is_fix_low_ports=0
 
-	get_longopt_val() { echo "$1" | cut -d= -f2-; }
-
 	if test $# -gt 0; then
 		while test $# -gt 0; do
 			case "$1" in
@@ -783,6 +783,13 @@ Tar relavent options:
 				shift
 				_opt_is_rootfs_tar=1
 				;;
+			-q | --qemu=*)
+				case "$1" in
+				-q) shift && _opt_qemu="$1" ;;
+				*) _opt_qemu="$(get_longopt_val "$1")" ;;
+				esac
+				shift
+				;;
 			--exclude=*)
 				if test "${tar_excludes+1}"; then
 					tar_excludes=$(printf "%s\n%s\n" "${tar_excludes}" "$(echo "$1" | base64)")
@@ -819,6 +826,10 @@ Tar relavent options:
 		error_exit "Refusing to write archive contents to terminal"
 	fi
 
+	if test "${_opt_qemu+1}"; then
+		set -- "$@" "--qemu=${_opt_qemu}"
+	fi
+
 	if ${_opt_is_rootfs_tar}; then
 		set -- "$@" "--rootfs=${_opt_rootfs_dir}"
 		set -- "$@" "--root-id"
@@ -838,12 +849,14 @@ Tar relavent options:
 	set -- "$@" "--exclude=.*sh_history"
 	set -- "$@" "--exclude=$(get_proot_conf . proot_data_dir)"
 	set -- "$@" "--exclude=./etc/profile.d/proot.sh"
-	set -- "$@" "-c" "."
-
+	if test "${_opt_qemu+1}"; then
+		set -- "$@" "--exclude=./host-rootfs"
+	fi
 	if test "${tar_excludes+1}"; then
 		# shellcheck disable=SC2046
 		set -- "$@" $(echo "${tar_excludes}" | base64 -d)
 	fi
+	set -- "$@" "-c" "."
 
 	set_proot_path
 	unset LD_PRELOAD
