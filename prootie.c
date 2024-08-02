@@ -1,7 +1,11 @@
 /*
-Note: PROOT_L2S_DIR must be absolute path, and it only affects hard link
-creation.
+Note:
+PROOT_L2S_DIR must be absolute path,
+link2symlink only affects creating file.
+
+If you meet issues, try to set env:
 PROOT_NO_SECCOMP=1
+may be helpful.
  */
 
 #include <getopt.h>
