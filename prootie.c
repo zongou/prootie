@@ -52,7 +52,7 @@ void set_proot_path(char ***strlistp) {
   } else if ((proot_path = get_tool_path("proot")) != NULL) {
     strlist_addl(strlistp, proot_path, NULL);
   } else {
-    fprintf(stderr, "%s: Cannot find proot in PATH and env\n", program);
+    fprintf(stderr, "%s: Cannot find proot.\n", program);
     exit(EXIT_FAILURE);
   }
 }
@@ -169,7 +169,7 @@ Tar relavent options:\n\
   if ((tar_path = get_tool_path("tar")) != NULL) {
     strlist_addl(&proot_argv, tar_path, NULL);
   } else {
-    fprintf(stderr, "%s: Cannot find tar in PATH\n", program);
+    fprintf(stderr, "%s: Cannot find tar\n", program);
     return EXIT_FAILURE;
   }
 
@@ -577,9 +577,9 @@ PRoot relavent options:\n\
     switch (c) {
     case 0:
       /* If this option set a flag, do nothing else now. */
-      // if (long_options[longopt_index].flag == 0) {
-      //   printf("long_option[%d]:%s=%s", longopt_index,
-      //          long_options[longopt_index].name, optarg);
+      // if (long_options[option_index].flag == 0) {
+      //   printf("long_option[%d]:%s=%s", option_index,
+      //          long_options[option_index].name, optarg);
       // }
       if (strcmp("env", long_options[option_index].name) == 0) {
         if (options.env == NULL) {

@@ -40,7 +40,7 @@ set_proot_path() {
 		if _val=$(command -v proot >&1); then
 			PROOT="${_val}"
 		else
-			error_exit "Cannot find proot in PATH and env PROOT not set."
+			error_exit "Cannot find proot."
 		fi
 	fi
 }
