@@ -104,7 +104,7 @@ Tar relavent options:
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
 					if ! test -e "$1"; then
-						_opt_rootfs_dir="$(realpath "$1")"
+						_opt_rootfs_dir="$1"
 						shift
 					else
 						error_exit "Rootfs '$1' already exists."
@@ -139,6 +139,8 @@ Tar relavent options:
 	trap "on_interrupt" HUP INT TERM
 
 	mkdir -p "${_opt_rootfs_dir}"
+	_opt_rootfs_dir="$(realpath "${_opt_rootfs_dir}")"
+	
 	set_proot_path
 	set_proot_env "${_opt_rootfs_dir}"
 	set -- --link2symlink --root-id tar
