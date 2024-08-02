@@ -774,7 +774,6 @@ Usage:
 
 Options:
   --help              show this help
-	--rootfs-tar				use tar from rootfs
 
 Tar relavent options:
   -v, --verbose
@@ -783,7 +782,6 @@ Tar relavent options:
 	}
 
 	_opt_tar_is_verbose=false
-	_opt_is_rootfs_tar=false
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -795,10 +793,6 @@ Tar relavent options:
 			-v | --verbose)
 				shift
 				_opt_tar_is_verbose=true
-				;;
-			--rootfs-tar)
-				shift
-				_opt_is_rootfs_tar=true
 				;;
 			--exclude=*)
 				if test "${tar_excludes+1}"; then
@@ -836,16 +830,10 @@ Tar relavent options:
 		error_exit "Refusing to write archive contents to terminal"
 	fi
 
-	if ${_opt_is_rootfs_tar}; then
-		set -- "$@" "--rootfs=${_opt_rootfs_dir}"
-		set -- "$@" "--root-id"
-		set -- "$@" "--cwd=/"
-		set -- "$@" "/bin/tar"
-	else
-		set -- "$@" "--root-id"
-		set -- "$@" "--cwd=${_opt_rootfs_dir}"
-		set -- "$@" "tar"
-	fi
+	set -- "$@" "--rootfs=${_opt_rootfs_dir}"
+	set -- "$@" "--root-id"
+	set -- "$@" "--cwd=/"
+	set -- "$@" "/bin/tar"
 
 	if ${_opt_tar_is_verbose}; then
 		set -- "$@" "-v"
