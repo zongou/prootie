@@ -47,6 +47,7 @@ set_proot_env() {
 			mkdir -p "${PROOT_L2S_DIR}"
 		fi
 	fi
+	PROOT_L2S_DIR=$(realpath "${PROOT_L2S_DIR}")
 	export PROOT_L2S_DIR
 
 	if ! test ${PROOT_TMP_DIR+1}; then
@@ -104,7 +105,7 @@ Tar relavent options:
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
 					if ! test -e "$1"; then
-						_opt_rootfs_dir="$(realpath "$1")"
+						_opt_rootfs_dir="$1"
 						shift
 					else
 						error_exit "Rootfs '$1' already exists."
@@ -537,7 +538,7 @@ PRoot relavent options:
 			-*) error_exit_unknown_option "$1" ;;
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
-					_opt_rootfs_dir="$(realpath "$1")"
+					_opt_rootfs_dir="$1"
 				else
 					error_exit "Excessive argument 'env'."
 				fi
@@ -789,7 +790,7 @@ Tar relavent options:
 			*)
 				if ! test "${_opt_rootfs_dir+1}"; then
 					if test -d "$1"; then
-						_opt_rootfs_dir="$(realpath "$1")"
+						_opt_rootfs_dir="$1"
 					else
 						error_exit "Rootfs '$1' not exists."
 					fi
