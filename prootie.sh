@@ -90,7 +90,7 @@ Tar relavent options:
 "
 	}
 
-	_opt_tar_is_verbose=0
+	_opt_tar_is_verbose=false
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -101,7 +101,7 @@ Tar relavent options:
 				;;
 			-v | --verbose)
 				shift
-				_opt_tar_is_verbose=1
+				_opt_tar_is_verbose=true
 				;;
 			--exclude=*)
 				if test "${tar_excludes+1}"; then
@@ -461,13 +461,13 @@ PRoot relavent options:
 	}
 
 	## Default option value
-	_opt_is_host_utils=0
+	_opt_is_host_utils=false
 
 	## PRoot relavent options
-	_opt_is_kill_on_exit=1
+	_opt_is_kill_on_exit=true
 	_opt_is_link2symlink=${link2symlink_default}
-	_opt_is_sysvipc=1
-	_opt_is_fix_low_ports=0
+	_opt_is_sysvipc=true
+	_opt_is_fix_low_ports=false
 
 	get_longopt_val() { echo "$1" | cut -d= -f2-; }
 
@@ -504,7 +504,7 @@ PRoot relavent options:
 				;;
 			--host-utils)
 				shift
-				_opt_is_host_utils=1
+				_opt_is_host_utils=true
 				;;
 			--env | --env=*)
 				case "$1" in
@@ -516,23 +516,23 @@ PRoot relavent options:
 				;;
 			--no-kill-on-exit)
 				shift
-				_opt_is_kill_on_exit=0
+				_opt_is_kill_on_exit=false
 				;;
 			--link2symlink)
 				shift
-				_opt_is_link2symlink=1
+				_opt_is_link2symlink=true
 				;;
 			--no-link2symlink)
 				shift
-				_opt_is_link2symlink=0
+				_opt_is_link2symlink=false
 				;;
 			--no-sysvipc)
 				shift
-				_opt_is_sysvipc=0
+				_opt_is_sysvipc=false
 				;;
 			--fix-low-ports)
 				shift
-				_opt_is_fix_low_ports=1
+				_opt_is_fix_low_ports=true
 				;;
 			-q | --qemu=*)
 				case "$1" in
@@ -782,8 +782,8 @@ Tar relavent options:
 "
 	}
 
-	_opt_tar_is_verbose=0
-	_opt_is_rootfs_tar=0
+	_opt_tar_is_verbose=false
+	_opt_is_rootfs_tar=false
 
 	if test $# -gt 0; then
 		while test $# -gt 0; do
@@ -794,11 +794,11 @@ Tar relavent options:
 				;;
 			-v | --verbose)
 				shift
-				_opt_tar_is_verbose=1
+				_opt_tar_is_verbose=true
 				;;
 			--rootfs-tar)
 				shift
-				_opt_is_rootfs_tar=1
+				_opt_is_rootfs_tar=true
 				;;
 			--exclude=*)
 				if test "${tar_excludes+1}"; then
@@ -897,10 +897,10 @@ Related environment variables:
 "
 	}
 
-	script_opt_is_verbose=0
-	link2symlink_default=0
+	script_opt_is_verbose=false
+	link2symlink_default=false
 	if is_android; then
-		link2symlink_default=1
+		link2symlink_default=true
 	fi
 
 	if test $# -eq 0; then
@@ -911,7 +911,7 @@ Related environment variables:
 			case "$1" in
 			-v | --verbose)
 				shift
-				script_opt_is_verbose=1
+				script_opt_is_verbose=true
 				;;
 			--help)
 				_show_help
