@@ -3,9 +3,6 @@ set -eu
 
 PROGRAM="$(basename "$0")"
 
-1() { true; }
-0() { false; }
-
 msg() { printf "%s\n" "$*" >&2; }
 info() { printf "%s\n" "${PROGRAM+${PROGRAM}:}$*" >&2; }
 vmsg() { if script_opt_is_verbose; then msg "${PROGRAM}:${COMMAND}:$*"; fi; }
@@ -732,8 +729,9 @@ PRoot relavent options:
 
 	## Start user command or default shell
 	if test "${args+1}"; then
-		# shellcheck disable=SC2046
-		set -- "$@" $(echo "${args}" | base64 -d)
+		for l in ${args}; do
+			set -- "$@" "$(echo $l | base64 -d)"
+		done
 	else
 		## If no argument command, login to root default shell
 		if test -e "${_opt_rootfs_dir}/etc/passwd"; then

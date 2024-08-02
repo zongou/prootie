@@ -107,8 +107,8 @@ Tar relavent options:\n\
   options.tar_is_verbose = 0;
   options.tar_excludes = NULL;
 
+  int option_index = 0;
   int c;
-  int longopt_index;
 
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
@@ -116,11 +116,11 @@ Tar relavent options:\n\
       {"exclude", required_argument, NULL, 0},
       {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hv", long_options, &longopt_index)) !=
+  while ((c = getopt_long(argc, argv, "hv", long_options, &option_index)) !=
          -1) {
     switch (c) {
     case 0:
-      if (strcmp("exclude", long_options[longopt_index].name) == 0) {
+      if (strcmp("exclude", long_options[option_index].name) == 0) {
         if (options.tar_excludes == NULL) {
           options.tar_excludes = strlist_new();
         }
@@ -555,8 +555,8 @@ PRoot relavent options:\n\
   options.sysvipc = 1;
   options.host_utils = 0;
 
+  int option_index = 0;
   int c;
-  int longopt_index;
 
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
@@ -573,7 +573,7 @@ PRoot relavent options:\n\
       {NULL, 0, NULL, 0}};
 
   while ((c = getopt_long(argc, argv, "hb:w:k:q:", long_options,
-                          &longopt_index)) != -1) {
+                          &option_index)) != -1) {
     switch (c) {
     case 0:
       /* If this option set a flag, do nothing else now. */
@@ -581,7 +581,7 @@ PRoot relavent options:\n\
       //   printf("long_option[%d]:%s=%s", longopt_index,
       //          long_options[longopt_index].name, optarg);
       // }
-      if (strcmp("env", long_options[longopt_index].name) == 0) {
+      if (strcmp("env", long_options[option_index].name) == 0) {
         if (options.env == NULL) {
           options.env = strlist_new();
         }
@@ -626,7 +626,7 @@ PRoot relavent options:\n\
       return EXIT_FAILURE;
     }
 
-    if (strcmp("--", argv[1]) != 0 && optind < argc) {
+    if (strcmp("--", argv[optind - 2]) != 0 && optind < argc) {
       printf("%s: Excessive argument '%s'.\n", program, argv[optind]);
       return EXIT_FAILURE;
     }
@@ -793,9 +793,6 @@ PRoot relavent options:\n\
   }
 
   if (optind < argc) {
-    if (is_verbose) {
-      list_argv(argc - optind, argv + optind, "forwarded_argv");
-    }
     for (int i = optind; i < argc; i++) {
       strlist_addl(&proot_argv, argv[i], NULL);
     }
@@ -846,8 +843,8 @@ Tar relavent options:\n\
   options.tar_is_verbose = 0;
   options.tar_excludes = NULL;
 
+  int option_index = 0;
   int c;
-  int longopt_index = 0;
 
   static struct option long_options[] = {
       {"help", no_argument, NULL, 'h'},
@@ -856,11 +853,11 @@ Tar relavent options:\n\
       {"rootfs-tar", no_argument, &options.rootfs_tar, 1},
       {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hv", long_options, &longopt_index)) !=
+  while ((c = getopt_long(argc, argv, "hv", long_options, &option_index)) !=
          -1) {
     switch (c) {
     case 0:
-      if (strcmp("exclude", long_options[longopt_index].name) == 0) {
+      if (strcmp("exclude", long_options[option_index].name) == 0) {
         if (options.tar_excludes == NULL) {
           options.tar_excludes = strlist_new();
         }
