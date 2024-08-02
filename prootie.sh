@@ -5,7 +5,6 @@ PROGRAM="$(basename "$0")"
 
 msg() { printf "%s\n" "$*" >&2; }
 info() { printf "%s\n" "${PROGRAM+${PROGRAM}:}$*" >&2; }
-vmsg() { if script_opt_is_verbose; then msg "${PROGRAM}:${COMMAND}:$*"; fi; }
 error_exit() { printf "%s: %s\n" "${PROGRAM}" "$*" >&2 && exit 1; }
 error_exit_unknown_option() { error_exit "Unknown option '$*'"; }
 error_exit_argument_error() { error_exit "Argument error: '$*'"; }
@@ -13,6 +12,18 @@ error_exit_argument_error() { error_exit "Argument error: '$*'"; }
 is_android() { test -f /system/bin/linker; }
 is_termux() { test "${TERMUX_VERSION+1}"; }
 is_anotherterm() { echo "${APP_ID-}" | grep -q "anotherterm"; }
+
+## [TITLE] [ARG]...
+list_args() {
+	title="$1"
+	shift
+	argc=0
+	while test $# -gt 0; do
+		msg "${title}[${argc}]=$1"
+		argc=$((argc + 1))
+		shift
+	done
+}
 
 ## [ROOTFS] [ITERM]
 get_proot_conf() {
@@ -57,7 +68,9 @@ set_proot_env() {
 	mkdir -p "${PROOT_TMP_DIR}"
 	export PROOT_TMP_DIR
 
-	vmsg "env=LD_PRELOAD= PROOT_L2S_DIR=\"${PROOT_L2S_DIR}\" PROOT_TMP_DIR=\"${PROOT_TMP_DIR}\""
+	if ${script_opt_is_verbose}; then
+		list_args "proot_envp" "LD_PRELOAD=" "PROOT_L2S_DIR=${PROOT_L2S_DIR}" "PROOT_TMP_DIR=${PROOT_TMP_DIR}"
+	fi
 }
 
 command_install() {
@@ -139,6 +152,7 @@ Tar relavent options:
 	mkdir -p "${_opt_rootfs_dir}"
 	set_proot_path
 	set_proot_env "${_opt_rootfs_dir}"
+
 	set -- --link2symlink --root-id tar
 
 	if ${_opt_tar_is_verbose}; then
@@ -152,7 +166,9 @@ Tar relavent options:
 		shift -- "$@" $(echo "${tar_excludes}" | base64 -d)
 	fi
 
-	vmsg "cmd=${PROOT} $*"
+	if ${script_opt_is_verbose}; then
+		list_args "proot_argv" "${PROOT}" "$@"
+	fi
 	"${PROOT}" "$@"
 
 	proot_fakerootfs_dir="$(get_proot_conf "${_opt_rootfs_dir}" proot_fakerootfs_dir)"
@@ -742,7 +758,9 @@ PRoot relavent options:
 	fi
 
 	## ========== Starting proot ==========
-	vmsg "cmd=${PROOT} $*"
+	if ${script_opt_is_verbose}; then
+		list_args "proot_argv" "${PROOT}" "$@"
+	fi
 	exec "${PROOT}" "$@"
 }
 
@@ -844,9 +862,13 @@ Tar relavent options:
 		set -- "$@" $(echo "${tar_excludes}" | base64 -d)
 	fi
 
-	set_proot_path
 	unset LD_PRELOAD
-	vmsg "cmd=${PROOT} $*"
+	set_proot_path
+
+	if ${script_opt_is_verbose}; then
+		list_args "proot_envp" "LD_PRELOAD="
+		list_args "proot_argv" "${PROOT}" "$@"
+	fi
 	exec "${PROOT}" "$@"
 }
 
@@ -875,6 +897,7 @@ Related environment variables:
 "
 	}
 
+	script_opt_is_verbose=0
 	link2symlink_default=0
 	if is_android; then
 		link2symlink_default=1
@@ -883,13 +906,12 @@ Related environment variables:
 	if test $# -eq 0; then
 		_show_help
 	else
-		script_opt_is_verbose() { false; }
 
 		while test $# -gt 0; do
 			case "$1" in
 			-v | --verbose)
 				shift
-				script_opt_is_verbose() { true; }
+				script_opt_is_verbose=1
 				;;
 			--help)
 				_show_help
