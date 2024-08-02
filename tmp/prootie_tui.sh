@@ -20,13 +20,15 @@ handle_meta() {
 	esac
 
 	index=0
-	echo "Distro,Release,Variant,Path"
+	echo "Distro,Release,Variant,Path,Arch"
 	while IFS=';' read -r DISTRO RELEASE ARCH VAR TS PATH; do
-		if test "${remote_arch}" = "${ARCH}" && ! test "${VAR}" = cloud && ! test "${DISTRO}" = "nixos"; then
+		# if test "${remote_arch}" = "${ARCH}"; then
+		if ! test "${VAR}" = cloud && ! test "${DISTRO}" = "nixos"; then
 			# echo "${DISTRO}" "${RELEASE}" "${ARCH}" "${VAR}" "${TS}" "${PATH}"
-			echo "${DISTRO},${RELEASE},${VAR},${PATH}"
+			echo "${DISTRO},${RELEASE},${VAR},${PATH},${ARCH}"
 			index=$((index + 1))
 		fi
+		# fi
 	done
 }
 
@@ -74,7 +76,7 @@ menu_install() {
 			dl_cmd="wget -qo-"
 		fi
 
-		selection=$(${dl_cmd} -Ss "${meta}" | handle_meta | gum table --widths=10,10,10,0)
+		selection=$(${dl_cmd} -Ss "${meta}" | handle_meta | gum table --widths=10,10,10,0,10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
@@ -83,8 +85,9 @@ menu_install() {
 		release=$(echo "${selection}" | cut -d',' -f2)
 		variant=$(echo "${selection}" | cut -d',' -f3)
 		path=$(echo "${selection}" | cut -d',' -f4)
+		arch=$(echo "${selection}" | cut -d',' -f5)
 
-		rootfs=${DISTROS_DIR}/${distro}-${release}-${variant}
+		rootfs=${DISTROS_DIR}/${distro}-${release}-${variant}-${arch}
 		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs}" --placeholder="Input rootfs")
 		${dl_cmd} "${lxc_mirror}${path}rootfs.tar.xz" | xz -d | "${PROOTIE}" install -v "${rootfs}"
 
