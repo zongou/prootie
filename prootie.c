@@ -1,7 +1,7 @@
 /*
 Note:
 PROOT_L2S_DIR must be absolute path,
-link2symlink only affects creating file.
+link2symlink only works when creating file.
 
 If you meet issues, try to set env:
 PROOT_NO_SECCOMP=1
