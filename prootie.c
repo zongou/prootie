@@ -828,6 +828,7 @@ Usage:\n\
 \n\
 Options:\n\
   --help              show this help\n\
+  --rootfs-tar        use tar from rootfs\n\
 \n\
 Tar relavent options:\n\
   -v, --verbose\n\
@@ -839,6 +840,7 @@ Tar relavent options:\n\
   static struct {
     int tar_is_verbose;
     char **tar_excludes;
+    int rootfs_tar;
   } options;
 
   options.tar_is_verbose = 0;
@@ -851,6 +853,7 @@ Tar relavent options:\n\
       {"help", no_argument, NULL, 'h'},
       {"verbose", no_argument, NULL, 'v'},
       {"exclude", required_argument, NULL, 0},
+      {"rootfs-tar", no_argument, &options.rootfs_tar, 1},
       {NULL, 0, NULL, 0}};
 
   while ((c = getopt_long(argc, argv, "hv", long_options, &longopt_index)) !=
@@ -904,8 +907,14 @@ Tar relavent options:\n\
   set_proot_env(&proot_envp);
 
   set_proot_path(&proot_argv);
-  strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), "--root-id",
-               "--cwd=/", "/bin/tar", NULL);
+
+  if (options.rootfs_tar) {
+    strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir),
+                 "--root-id", "--cwd=/", "/bin/tar", NULL);
+  } else {
+    strlist_addl(&proot_argv, "--root-id", my_asprintf("--cwd=%s", rootfs_dir),
+                 get_tool_path("tar"), NULL);
+  }
 
   if (options.tar_is_verbose) {
     strlist_addl(&proot_argv, "-v", NULL);
