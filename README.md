@@ -4,13 +4,13 @@ Supercharges your PRoot experience.
 
 ## prootie VS proot-distro
 
-Login 35x faster
+Login 40x faster
 
-| Command                                        |      Mean [s] | Min [s] | Max [s] |      Relative |
-| :--------------------------------------------- | ------------: | ------: | ------: | ------------: |
-| `proot-distro login alpine -- /bin/sh -lc pwd` | 1.507 ± 0.482 |   0.918 |   2.098 | 35.90 ± 23.54 |
-| `./prootie.sh login alpine -- /bin/sh -lc pwd` | 0.620 ± 0.153 |   0.494 |   1.018 |  14.77 ± 9.21 |
-| `./prootie login alpine -- /bin/sh -lc pwd`    | 0.042 ± 0.024 |   0.018 |   0.101 |          1.00 |
+| Command                                    |      Mean [s] | Min [s] | Max [s] |      Relative |
+| :----------------------------------------- | ------------: | ------: | ------: | ------------: |
+| `proot-distro login alpine -- pwd`         | 1.894 ± 0.070 |   1.739 |   2.004 | 42.71 ± 11.66 |
+| `./prootie.sh login distros/alpine -- pwd` | 0.301 ± 0.022 |   0.270 |   0.337 |   6.79 ± 1.90 |
+| `./prootie login distros/alpine -- pwd`    | 0.044 ± 0.012 |   0.028 |   0.080 |          1.00 |
 
 Comparison:
 
