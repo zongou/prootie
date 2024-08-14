@@ -89,7 +89,7 @@ menu_install() {
 		${dl_cmd} "${lxc_mirror}${path}rootfs.tar.xz" | xz -d | "${PROOTIE}" install -v "${rootfs}"
 
 		case "${distro}" in
-		ubuntu) touch /root/.hushlogin ;;
+		ubuntu) touch "${rootfs}/root/.hushlogin" ;;
 		voidlinux) sed -i "s^root:x:0:0:root:/root:/bin/sh^root:x:0:0:root:/root:/bin/bash^g" "${rootfs}/etc/passwd" ;;
 		*) ;;
 		esac
