@@ -160,10 +160,11 @@ Tar relavent options:
 	fi
 
 	set -- "$@" -C "${_opt_rootfs_dir}" -x
+	set -- "$@" --exclude=dev --exclude=./dev
 
 	if test "${tar_excludes+1}"; then
 		# shellcheck disable=SC2046
-		shift -- "$@" $(echo "${tar_excludes}" | base64 -d)
+		set -- "$@" $(echo "${tar_excludes}" | base64 -d)
 	fi
 
 	if ${script_opt_is_verbose}; then

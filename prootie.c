@@ -177,6 +177,7 @@ Tar relavent options:\n\
     strlist_addl(&proot_argv, "-v", NULL);
   }
 
+  strlist_addl(&proot_argv, "--exclude=dev", "--exclude=./dev", NULL);
   strlist_addl(&proot_argv, "-C", rootfs_dir, "-x", NULL);
   if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
     for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
