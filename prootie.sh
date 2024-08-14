@@ -4,7 +4,7 @@ set -eu
 PROGRAM="$(basename "$0")"
 
 msg() { printf "%s\n" "$*" >&2; }
-info() { printf "%s\n" "${PROGRAM+${PROGRAM}:}$*" >&2; }
+info() { printf "%s\n" "${PROGRAM}: $*" >&2; }
 error_exit() { printf "%s: %s\n" "${PROGRAM}" "$*" >&2 && exit 1; }
 error_exit_unknown_option() { error_exit "Unknown option '$*'"; }
 error_exit_argument_error() { error_exit "Argument error: '$*'"; }
