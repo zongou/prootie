@@ -74,7 +74,7 @@ menu_install() {
 			dl_cmd="wget -qo-"
 		fi
 
-		selection=$(${dl_cmd} -Ss "${meta}" | handle_meta | gum table --widths=10,10,10,0)
+		selection=$(${dl_cmd} -Ss "${meta}" | handle_meta | gum table --widths=10,10,10,0 --height=10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
