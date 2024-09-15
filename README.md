@@ -4,7 +4,7 @@ Supercharges your PRoot experience.
 
 ## prootie VS proot-distro
 
-Login 40x faster
+Login 40x faster than proot-distro.
 
 | Command                                    |      Mean [s] | Min [s] | Max [s] |      Relative |
 | :----------------------------------------- | ------------: | ------: | ------: | ------------: |
@@ -12,61 +12,67 @@ Login 40x faster
 | `./prootie.sh login distros/alpine -- pwd` | 0.301 ± 0.022 |   0.270 |   0.337 |   6.79 ± 1.90 |
 | `./prootie login distros/alpine -- pwd`    | 0.044 ± 0.012 |   0.028 |   0.080 |          1.00 |
 
-Comparison:
-
-| Item                              | prootie         | proot-distro |
-| --------------------------------- | --------------- | ------------ |
-| written language                  | c               | bash         |
-| install custom rootfs archive     | easy            | hard         |
-| customizable rootfs location      | yes             | no           |
-| installing while downloading      | yes             | no           |
-| clone rootfs                      | yes             | no           |
-| output standard rootfs archive    | yes             | no           |
-| handling stdin, stdout and stderr | yes             | no           |
-| user-friendly                     | only 3 commands | 10 commands  |
-| supported platforms               | Android, Linux  | Android      |
-
 ## Quick start
 
 ### Compile from source
 
+On Termux:
+
 ```sh
-cc prootie.c -o prootie
+cc -o "${PREFIX}/prootie" prootie.c -s -Os
 ```
 
-### Install rootfs
+On Linux:
 
 ```sh
-version=3.20.1
-rootfs=./alpine
+cc -o prootie prootie.c -s -Os
+sudo mv prootie /usr/local/bin/prootie
+```
+
+### Manage distros with prootie-tui.sh
+
+make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
+
+```sh
+./tmp/prootie_tui.sh
+```
+
+### Manage distros manually
+
+#### Install rootfs
+
+```sh
+version=3.20.3
+DISTROS_DIR=${HOME}/.prootie/distros
+mkdir -p "${DISTROS_DIR}"
 
 arch=$(uname -m)
 version_main=$(echo "${version}" | grep -Eo "^[0-9]\.[0-9]+")
 archive=alpine-minirootfs-${version}-${arch}.tar.gz
 rootfs_url=https://dl-cdn.alpinelinux.org/alpine/v${version_main}/releases/${arch}/${archive}
 
-curl -Lk "${rootfs_url}" | gzip -d | ./prootie -v install "${rootfs}"
+curl -Lk "${rootfs_url}" | gzip -d | prootie -v install ./alpine
 ```
 
-### Login rootfs
+#### Login rootfs
 
 ```sh
-prootie login alpine
+prootie login ./alpine
 ```
 
-### Archive rootfs
+#### Archive rootfs
 
 ```sh
-prootie archive alpine | gzip > alpine.tar.gz
+prootie archive ./alpine | gzip > alpine.tar.gz
 ```
 
-### Clone rootfs
+#### Clone rootfs
 
 ```sh
-prootie archive alpine | prootie install alpine2
+prootie archive ./alpine | prootie install ./alpine2
 ```
 
-## Tested distros
+### Tested distros
 
 | distro            | status | notes                                          |
 | ----------------- | ------ | ---------------------------------------------- |
@@ -85,6 +91,6 @@ prootie archive alpine | prootie install alpine2
 | rockylinux (9)    | OK     |                                                |
 | openwrt (23.05)   | OK     |                                                |
 
-## More
+### More
 
 [Document for configuring Desktop enviroment and Audio on android](doc.md)

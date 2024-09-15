@@ -2,8 +2,9 @@
 set -eu
 
 PROOTIE="${PROOTIE:-prootie}"
-DISTROS_DIR="${DISTROS_DIR-./distros}"
-BACKUPS_DIR="${BACKUPS_DIR-./backups}"
+DATA_DIR="${HOME}/.prootie"
+DISTROS_DIR="${DATA_DIR}/distros"
+BACKUPS_DIR="${DATA_DIR}/backups"
 
 choose_rootfs() {
 	find "${DISTROS_DIR}" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | gum choose --header="Choose a rootfs:"
@@ -31,7 +32,7 @@ handle_meta() {
 }
 
 menu_install() {
-	STR_INSTALL_FROM_FILE="Install from file"
+	STR_INSTALL_FROM_FILE="Install from local file"
 	lxc_mirror="$(
 		gum choose \
 			--header="Choose a LXC mirror:" \
@@ -46,13 +47,13 @@ menu_install() {
 	)"
 
 	if ! test -d "${DISTROS_DIR}"; then
-		mkdir "${DISTROS_DIR}"
+		mkdir -p "${DISTROS_DIR}"
 	fi
 
 	case "${lxc_mirror}" in
 	"${STR_INSTALL_FROM_FILE}")
 		if ! test -d "${BACKUPS_DIR}"; then
-			mkdir "${BACKUPS_DIR}"
+			mkdir -p "${BACKUPS_DIR}"
 		fi
 
 		file=$(gum file "${BACKUPS_DIR}")
