@@ -1,10 +1,8 @@
 #!/bin/sh
 set -eu
 
-PROOTIE="${PROOTIE:-prootie}"
-DATA_DIR="${HOME}/.prootie"
-DISTROS_DIR="${DATA_DIR}/distros"
-BACKUPS_DIR="${DATA_DIR}/backups"
+DISTROS_DIR="${HOME}/.distros"
+BACKUPS_DIR="${HOME}/.distros_backup"
 
 choose_rootfs() {
 	find "${DISTROS_DIR}" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | gum choose --header="Choose a rootfs:"
@@ -60,10 +58,10 @@ menu_install() {
 		rootfs_name=$(gum input --placeholder="Input rootfs name.")
 		case "${file}" in
 		*.tar.gz)
-			gzip -d <"${file}" | "${PROOTIE}" install -v "${DISTROS_DIR}/${rootfs_name}"
+			gzip -d <"${file}" | prootie install -v "${DISTROS_DIR}/${rootfs_name}"
 			;;
 		*.tar.xz)
-			xz -d <"${file}" | "${PROOTIE}" install -v "${DISTROS_DIR}/${rootfs_name}"
+			xz -d <"${file}" | prootie install -v "${DISTROS_DIR}/${rootfs_name}"
 			;;
 		esac
 		;;
@@ -87,7 +85,7 @@ menu_install() {
 
 		rootfs=${DISTROS_DIR}/${distro}-${release}-${variant}
 		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs}" --placeholder="Input rootfs")
-		${dl_cmd} "${lxc_mirror}${path}rootfs.tar.xz" | xz -d | "${PROOTIE}" install -v "${rootfs}"
+		${dl_cmd} "${lxc_mirror}${path}rootfs.tar.xz" | xz -d | prootie install -v "${rootfs}"
 
 		case "${distro}" in
 		ubuntu) touch "${rootfs}/root/.hushlogin" ;;
@@ -96,7 +94,7 @@ menu_install() {
 		esac
 
 		if gum confirm "Login ${rootfs} now?"; then
-			${PROOTIE} login "${rootfs}"
+			prootie login "${rootfs}"
 		fi
 		;;
 	esac
@@ -104,7 +102,7 @@ menu_install() {
 
 menu_login() {
 	rootfs="${DISTROS_DIR}/$(choose_rootfs)"
-	"${PROOTIE}" login "${rootfs}"
+	prootie login "${rootfs}"
 }
 
 menu_archive() {
@@ -130,12 +128,12 @@ menu_archive() {
 	gzip | pigz)
 		output_file="${BACKUPS_DIR}/${rootfs_name}.tar.gz"
 		output_file=$(gum input --header="Input output file name:" --value="${output_file}" --placeholder="Input output file name")
-		"${PROOTIE}" archive "${DISTROS_DIR}/${rootfs_name}" -v | "${compression_tool}" >"${output_file}"
+		prootie archive "${DISTROS_DIR}/${rootfs_name}" -v | "${compression_tool}" >"${output_file}"
 		;;
 	xz)
 		output_file="${BACKUPS_DIR}/${rootfs_name}.tar.xz"
 		output_file=$(gum input --header="Input output file name:" --value="${output_file}" --placeholder="Input output file name")
-		"${PROOTIE}" archive "${DISTROS_DIR}/${rootfs_name}" -v | xz -T0 >"${output_file}"
+		prootie archive "${DISTROS_DIR}/${rootfs_name}" -v | xz -T0 >"${output_file}"
 		;;
 	*) ;;
 	esac

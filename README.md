@@ -2,19 +2,23 @@
 
 Supercharges your PRoot experience.
 
-## prootie VS proot-distro
+- Login 50x faster than proot-distro.
+- 0 knowledge required with the TUI script.
+- Install while downloading rootfs.
+- Install distro to any directory you like.
+- Outputs standard rootfs archive.
+- Use with ease, only 3 commands.
+- supportes Android and linux.
+- Clone rootfs with command `archive` and `install` used together.
+- built-in commands in Termux and Anotherterm are supported with option `--host-utils` of command `login`.
 
-Login 40x faster than proot-distro.
+| Command                                                                            |      Mean [s] | Min [s] | Max [s] |      Relative |
+| :--------------------------------------------------------------------------------- | ------------: | ------: | ------: | ------------: |
+| `proot-distro login alpine -- pwd`                                                 | 1.999 ± 0.046 |   1.892 |   2.074 | 50.40 ± 10.03 |
+| `prootie.sh login /data/data/com.termux/files/home/.prootie/distros/alpine -- pwd` | 0.337 ± 0.023 |   0.307 |   0.387 |   8.51 ± 1.78 |
+| `prootie login /data/data/com.termux/files/home/.prootie/distros/alpine -- pwd`    | 0.040 ± 0.008 |   0.027 |   0.067 |          1.00 |
 
-| Command                                    |      Mean [s] | Min [s] | Max [s] |      Relative |
-| :----------------------------------------- | ------------: | ------: | ------: | ------------: |
-| `proot-distro login alpine -- pwd`         | 1.894 ± 0.070 |   1.739 |   2.004 | 42.71 ± 11.66 |
-| `./prootie.sh login distros/alpine -- pwd` | 0.301 ± 0.022 |   0.270 |   0.337 |   6.79 ± 1.90 |
-| `./prootie login distros/alpine -- pwd`    | 0.044 ± 0.012 |   0.028 |   0.080 |          1.00 |
-
-## Quick start
-
-### Compile from source
+## Compile from source
 
 On Termux:
 
@@ -29,7 +33,7 @@ cc -o prootie prootie.c -s -Os
 sudo mv prootie /usr/local/bin/prootie
 ```
 
-### Manage distros with prootie-tui.sh
+## Manage distros with TUI script
 
 make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
 
@@ -37,42 +41,41 @@ make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
 ./tmp/prootie_tui.sh
 ```
 
-### Manage distros manually
+## Manage distros manually
 
-#### Install rootfs
+### Install rootfs
 
 ```sh
-version=3.20.3
-DISTROS_DIR=${HOME}/.prootie/distros
-mkdir -p "${DISTROS_DIR}"
-
+set -eu
 arch=$(uname -m)
+version=3.20.3
 version_main=$(echo "${version}" | grep -Eo "^[0-9]\.[0-9]+")
-archive=alpine-minirootfs-${version}-${arch}.tar.gz
-rootfs_url=https://dl-cdn.alpinelinux.org/alpine/v${version_main}/releases/${arch}/${archive}
+archive_url=https://dl-cdn.alpinelinux.org/alpine/v${version_main}/releases/${arch}/alpine-minirootfs-${version}-${arch}.tar.gz
+rootfs="${HOME}/.distros/alpine"
 
-curl -Lk "${rootfs_url}" | gzip -d | prootie -v install ./alpine
+mkdir -p "$(dirname "${rootfs}")"
+curl -SsLk "${archive_url}" | gzip -d | prootie -v install "${rootfs}"
 ```
 
-#### Login rootfs
+### Login rootfs
 
 ```sh
-prootie login ./alpine
+prootie login "${HOME}/.distros/alpine"
 ```
 
-#### Archive rootfs
+### Archive rootfs
 
 ```sh
-prootie archive ./alpine | gzip > alpine.tar.gz
+prootie archive "${HOME}/.distros/alpine" | gzip > alpine.tar.gz
 ```
 
-#### Clone rootfs
+### Clone rootfs
 
 ```sh
-prootie archive ./alpine | prootie install ./alpine2
+prootie archive "${HOME}/.distros/alpine" | prootie install "${HOME}/.distros/alpine2"
 ```
 
-### Tested distros
+## Tested distros
 
 | distro            | status | notes                                          |
 | ----------------- | ------ | ---------------------------------------------- |
@@ -91,6 +94,6 @@ prootie archive ./alpine | prootie install ./alpine2
 | rockylinux (9)    | OK     |                                                |
 | openwrt (23.05)   | OK     |                                                |
 
-### More
+## More
 
 [Document for configuring Desktop enviroment and Audio on android](doc.md)
