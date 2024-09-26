@@ -19,7 +19,7 @@ Login 40x faster than proot-distro.
 On Termux:
 
 ```sh
-cc -o "${PREFIX}/prootie" prootie.c -s -Os
+cc -o "${PREFIX}/bin/prootie" prootie.c -s -Os
 ```
 
 On Linux:
