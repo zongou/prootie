@@ -97,7 +97,7 @@ menu_install() {
 		*) ;;
 		esac
 
-		if gum confirm "Login ${rootfs} now?"; then
+		if gum confirm "Login now?"; then
 			prootie login "${rootfs}"
 		fi
 		;;

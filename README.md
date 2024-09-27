@@ -40,7 +40,7 @@ sudo cp prootie_tui /usr/bin/prootie_tui
 make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
 
 ```sh
-./tmp/prootie_tui.sh
+prootie_tui
 ```
 
 ## Manage distros manually
@@ -98,4 +98,4 @@ prootie archive "${HOME}/.distros/alpine" | prootie install "${HOME}/.distros/al
 
 ## More
 
-[Document for configuring Desktop enviroment and Audio on android](doc.md)
+[Document for configuring Desktop enviroment and Audio on android](tmp/doc.md)
