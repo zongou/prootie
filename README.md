@@ -3,7 +3,7 @@
 Supercharges your PRoot experience.
 
 - Login 50x faster than proot-distro.
-- 0 knowledge required with the TUI script.
+- 0 knowledge required to use with the TUI script.
 - Install while downloading rootfs.
 - Install distro to any directory you like.
 - Outputs standard rootfs archive.
@@ -12,11 +12,11 @@ Supercharges your PRoot experience.
 - Clone rootfs with command `archive` and `install` used together.
 - built-in commands in Termux and Anotherterm are supported with option `--host-utils` of command `login`.
 
-| Command                                                                            |      Mean [s] | Min [s] | Max [s] |      Relative |
-| :--------------------------------------------------------------------------------- | ------------: | ------: | ------: | ------------: |
-| `proot-distro login alpine -- pwd`                                                 | 1.999 ± 0.046 |   1.892 |   2.074 | 50.40 ± 10.03 |
-| `prootie.sh login /data/data/com.termux/files/home/.prootie/distros/alpine -- pwd` | 0.337 ± 0.023 |   0.307 |   0.387 |   8.51 ± 1.78 |
-| `prootie login /data/data/com.termux/files/home/.prootie/distros/alpine -- pwd`    | 0.040 ± 0.008 |   0.027 |   0.067 |          1.00 |
+| Command                                         |      Mean [s] | Min [s] | Max [s] |      Relative |
+| :---------------------------------------------- | ------------: | ------: | ------: | ------------: |
+| `proot-distro login alpine -- pwd`              | 1.999 ± 0.046 |   1.892 |   2.074 | 50.40 ± 10.03 |
+| `prootie.sh login $HOME/.distros/alpine -- pwd` | 0.337 ± 0.023 |   0.307 |   0.387 |   8.51 ± 1.78 |
+| `prootie login $HOME/.distros/alpine -- pwd`    | 0.040 ± 0.008 |   0.027 |   0.067 |          1.00 |
 
 ## Compile from source
 
@@ -24,6 +24,7 @@ On Termux:
 
 ```sh
 cc -o "${PREFIX}/bin/prootie" prootie.c -s -Os
+cp prootie_tui "${PREFIX}/bin/prootie_tui"
 ```
 
 On Linux:
@@ -31,6 +32,7 @@ On Linux:
 ```sh
 cc -o prootie prootie.c -s -Os
 sudo mv prootie /usr/local/bin/prootie
+sudo cp prootie_tui /usr/bin/prootie_tui
 ```
 
 ## Manage distros with TUI script

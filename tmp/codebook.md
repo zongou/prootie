@@ -11,6 +11,7 @@ set -eu
 zig cc -target $(uname -m)-linux-musl -o $PREFIX/bin/prootie prootie.c -s -Os
 zig cc -target $(uname -m)-linux-musl -o $PREFIX/bin/plogin tmp/plogin.c -s -Os
 cp prootie.sh $PREFIX/bin/prootie.sh
+cp prootie_tui "${PREFIX}/bin/prootie_tui"
 
 file $(command -v prootie)
 file $(command -v plogin)
@@ -27,6 +28,7 @@ zig cc -target $(uname -m)-linux-musl -o plogin tmp/plogin.c -s -Os
 sudo mv prootie /usr/local/bin/prootie
 sudo mv plogin /usr/local/bin/plogin
 sudo cp prootie.sh /usr/local/bin/prootie.sh
+sudo cp prootie_tui /usr/bin/prootie_tui
 
 file $(command -v prootie)
 file $(command -v plogin)

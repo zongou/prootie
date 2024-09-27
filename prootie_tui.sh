@@ -2,10 +2,14 @@
 set -eu
 
 DISTROS_DIR="${HOME}/.distros"
-BACKUPS_DIR="${HOME}/.distros_backup"
+BACKUPS_DIR="${HOME}/.distros/.backup"
 
 choose_rootfs() {
-	find "${DISTROS_DIR}" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | gum choose --header="Choose a rootfs:"
+	find "${DISTROS_DIR}" -maxdepth 1 -mindepth 1 -type d -not -name ".*" -exec basename {} \; | gum choose --header="Choose a rootfs:"
+}
+
+html_to_meta() {
+	grep -E "^<tr>" | sed -E 's/<td>//g' | sed -E 's/<\/td>/;/g' | sed -E 's/<\/?tr>//g' | cut -d\; -f1-5
 }
 
 handle_meta() {
@@ -19,11 +23,10 @@ handle_meta() {
 	esac
 
 	index=0
-	echo "Distro,Release,Variant,Path"
-	while IFS=';' read -r DISTRO RELEASE ARCH VAR TS PATH; do
-		if test "${remote_arch}" = "${ARCH}" && ! test "${VAR}" = cloud && ! test "${DISTRO}" = "nixos"; then
-			# echo "${DISTRO}" "${RELEASE}" "${ARCH}" "${VAR}" "${TS}" "${PATH}"
-			echo "${DISTRO},${RELEASE},${VAR},${PATH}"
+	echo "DISTRO,RELEASE,ARCH,VARIANT,TIMESTAMP"
+	while IFS=';' read -r DISTRO RELEASE ARCH VARIANT TIMESTAMP; do
+		if test "${remote_arch}" = "${ARCH}" && ! test "${VARIANT}" = cloud && ! test "${DISTRO}" = "nixos"; then
+			echo "${DISTRO},${RELEASE},${ARCH},${VARIANT},${TIMESTAMP}"
 			index=$((index + 1))
 		fi
 	done
@@ -66,26 +69,27 @@ menu_install() {
 		esac
 		;;
 	*)
-		meta="${lxc_mirror}/meta/1.0/index-user"
-
 		dl_cmd="curl -SsLk"
 		if ! command -v curl >/dev/null && command -v wget >/dev/null; then
 			dl_cmd="wget -qo-"
 		fi
 
-		selection=$(${dl_cmd} -Ss "${meta}" | handle_meta | gum table --widths=10,10,10,0 --height=10)
+		# selection=$(${dl_cmd} -Ss "${lxc_mirror}/meta/1.0/index-user" | handle_meta | gum table --widths=10,10,10,0,0 --height=10)
+		selection=$(${dl_cmd} -Ss "${lxc_mirror}" | html_to_meta | handle_meta | gum table --widths=10,10,10,0,0 --height=10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
 
 		distro=$(echo "${selection}" | cut -d',' -f1)
 		release=$(echo "${selection}" | cut -d',' -f2)
-		variant=$(echo "${selection}" | cut -d',' -f3)
-		path=$(echo "${selection}" | cut -d',' -f4)
+		arch=$(echo "${selection}" | cut -d',' -f3)
+		variant=$(echo "${selection}" | cut -d',' -f4)
+		timestamp=$(echo "${selection}" | cut -d',' -f5)
 
-		rootfs=${DISTROS_DIR}/${distro}-${release}-${variant}
-		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs}" --placeholder="Input rootfs")
-		${dl_cmd} "${lxc_mirror}${path}rootfs.tar.xz" | xz -d | prootie install -v "${rootfs}"
+		archive_url=${lxc_mirror}/images/${distro}/${release}/${arch}/${variant}/${timestamp}/rootfs.tar.xz
+		rootfs_default=${DISTROS_DIR}/${distro}-${release}-${variant}
+		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs_default}" --placeholder="Input rootfs")
+		${dl_cmd} "${archive_url}" | xz -d | prootie install -v "${rootfs}"
 
 		case "${distro}" in
 		ubuntu) touch "${rootfs}/root/.hushlogin" ;;
