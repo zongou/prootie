@@ -9,7 +9,7 @@ choose_rootfs() {
 }
 
 html_to_meta() {
-	grep -E "^<tr>" | sed -E 's/<td>//g' | sed -E 's/<\/td>/;/g' | sed -E 's/<\/?tr>//g' | cut -d\; -f1-5
+	grep -E "^<tr>" | grep -Eo 'href="/images/.+"' | sed 's/href=\"\/images\///g' | sed 's/\/\"$//g' | sed 's/\//;/g' | cut -d\; -f1-5
 }
 
 handle_meta() {
