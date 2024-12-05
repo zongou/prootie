@@ -75,7 +75,7 @@ menu_install() {
 		fi
 
 		# selection=$(${dl_cmd} -Ss "${lxc_mirror}/meta/1.0/index-user" | handle_meta | gum table --widths=10,10,10,0,0 --height=10)
-		selection=$(${dl_cmd} -Ss "${lxc_mirror}" | html_to_meta | handle_meta | gum table --widths=10,10,10,0,0 --height=10)
+		selection=$(${dl_cmd} -Ss "${lxc_mirror}" | html_to_meta | handle_meta | gum table --widths=10,10,0,10,0 --height=10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
