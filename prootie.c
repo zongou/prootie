@@ -566,6 +566,7 @@ PRoot relavent options:\n\
       {"no-link2symlink", no_argument, &options.link2symlink, 0},
       {"fix-low-ports", no_argument, &options.fix_low_ports, 1},
       {"bind", required_argument, NULL, 'b'},
+      {"mount", required_argument, NULL, 'm'},
       {"cwd", required_argument, NULL, 'w'},
       {"kernel-release", required_argument, NULL, 'k'},
       {"qemu", required_argument, NULL, 'q'},
@@ -573,7 +574,7 @@ PRoot relavent options:\n\
       {"env", required_argument, NULL, 0},
       {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hb:w:k:q:", long_options,
+  while ((c = getopt_long(argc, argv, "hb:m:w:k:q:", long_options,
                           &option_index)) != -1) {
     switch (c) {
     case 0:
@@ -594,6 +595,7 @@ PRoot relavent options:\n\
       return EXIT_SUCCESS;
       break;
     case 'b':
+    case 'm':
       if (options.bindings == NULL) {
         options.bindings = strlist_new();
       }
