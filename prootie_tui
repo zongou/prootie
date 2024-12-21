@@ -9,10 +9,11 @@ choose_rootfs() {
 }
 
 html_to_meta() {
-	grep -E "^<tr>" | grep -Eo 'href="/images/.+"' | sed 's/href=\"\/images\///g' | sed 's/\/\"$//g' | sed 's/\//;/g' | cut -d\; -f1-5
+	# grep -E "^<tr>" | grep -Eo 'href="/images/.+"' | sed 's/href=\"\/images\///g' | sed 's/\/\"$//g' | sed 's/\//;/g' | cut -d\; -f1-5
+	grep -Eo "<tr><td>.+</td></tr>" | sed -E 's^<tr><td>(.+)</td><td>(.+)</td><td>(.+)</td><td>(.+)</td><td><a href="(.+)">(.+)</a></td><td>(.+)</td><td>(.+)</td><td>(.+)</td><td>(.+)</td></tr>^\1;\2;\3;\4;\6;\5^g'
 }
 
-handle_meta() {
+meta_to_table() {
 	local_arch=$(uname -m)
 	case "${local_arch}" in
 	aarch64) remote_arch=arm64 ;;
@@ -23,16 +24,16 @@ handle_meta() {
 	esac
 
 	index=0
-	echo "DISTRO,RELEASE,ARCH,VARIANT,TIMESTAMP"
-	while IFS=';' read -r DISTRO RELEASE ARCH VARIANT TIMESTAMP; do
+	echo "DISTRO,RELEASE,ARCH,VARIANT,TIMESTAMP,REFERENCE"
+	while IFS=';' read -r DISTRO RELEASE ARCH VARIANT TIMESTAMP REFERENCE; do
 		if test "${remote_arch}" = "${ARCH}" && ! test "${VARIANT}" = cloud && ! test "${DISTRO}" = "nixos"; then
-			echo "${DISTRO},${RELEASE},${ARCH},${VARIANT},${TIMESTAMP}"
+			echo "${DISTRO},${RELEASE},${ARCH},${VARIANT},${TIMESTAMP},${REFERENCE}"
 			index=$((index + 1))
 		fi
 	done
 }
 
-menu_install() {
+command_install() {
 	STR_INSTALL_FROM_FILE="Install from local file"
 	lxc_mirror="$(
 		gum choose \
@@ -74,8 +75,8 @@ menu_install() {
 			dl_cmd="wget -qo-"
 		fi
 
-		# selection=$(${dl_cmd} -Ss "${lxc_mirror}/meta/1.0/index-user" | handle_meta | gum table --widths=10,10,10,0,0 --height=10)
-		selection=$(${dl_cmd} -Ss "${lxc_mirror}" | html_to_meta | handle_meta | gum table --widths=10,10,0,10,0 --height=10)
+		# selection=$(${dl_cmd} -Ss "${lxc_mirror}/meta/1.0/index-user" | meta_to_table | gum table --widths=10,10,10,0,0,0 --height=10)
+		selection=$(${dl_cmd} -Ss "${lxc_mirror}" | html_to_meta | meta_to_table | gum table --widths=10,10,0,10,0,0 --height=10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
@@ -104,29 +105,24 @@ menu_install() {
 	esac
 }
 
-menu_login() {
+command_login() {
 	rootfs="${DISTROS_DIR}/$(choose_rootfs)"
 	prootie login "${rootfs}"
 }
 
-menu_archive() {
-	tools=""
-	if command -v gzip >/dev/null; then
-		tools="${tools} gzip"
-	fi
-	if command -v xz >/dev/null; then
-		tools="${tools} xz"
-	fi
-	if command -v pigz >/dev/null; then
-		tools="${tools} pigz"
-	fi
-
+command_archive() {
 	if ! test -d "${BACKUPS_DIR}"; then
 		mkdir "${BACKUPS_DIR}"
 	fi
 
 	rootfs_name=$(choose_rootfs)
-	compression_tool=$(gum choose --header="Choose a compression tool:" ${tools})
+	compression_tool=$(gum choose --header="Choose a compression tool:" $(
+		for tool in gzip pigz xz; do
+			if command -v ${tool} >/dev/null; then
+				printf "${tool} "
+			fi
+		done
+	))
 
 	case "${compression_tool}" in
 	gzip | pigz)
@@ -146,29 +142,26 @@ menu_archive() {
 }
 
 main() {
-	menu1="install"
-	menu2="login"
-	menu3="archive"
-	menu4="exit"
-
-	if test "${1+1}"; then
-		selected_menu=$1
+	CMD_INSTALL=install
+	CMD_LOGIN=login
+	CMD_ARCHIVE=archive
+	CMD_EXIT=exit
+	if test $# -gt 0; then
+		case "$1" in
+		"${CMD_INSTALL}") command_install ;;
+		"${CMD_LOGIN}") command_login ;;
+		"${CMD_ARCHIVE}") command_archive ;;
+		"${CMD_EXIT}") exit 0 ;;
+		*) exit 1 ;;
+		esac
 	else
-		selected_menu=$(gum choose \
-			--header="Choose an action:" \
-			"${menu1}" \
-			"${menu2}" \
-			"${menu3}" \
-			"${menu4}")
+		selection=$(gum choose "${CMD_INSTALL}" "${CMD_LOGIN}" "${CMD_ARCHIVE}" "${CMD_EXIT}")
+		if test ${selection+1}; then
+			main "${selection}"
+		else
+			exit 1
+		fi
 	fi
-
-	case "${selected_menu}" in
-	"${menu1}") menu_install ;;
-	"${menu2}") menu_login ;;
-	"${menu3}") menu_archive ;;
-	"${menu4}") exit 0 ;;
-	*) ;;
-	esac
 }
 
 main "$@"
