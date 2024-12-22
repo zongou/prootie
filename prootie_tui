@@ -72,11 +72,11 @@ command_install() {
 	*)
 		dl_cmd="curl -SsLk"
 		if ! command -v curl >/dev/null && command -v wget >/dev/null; then
-			dl_cmd="wget -qo-"
+			dl_cmd="wget -qO-"
 		fi
 
-		# selection=$(${dl_cmd} -Ss "${lxc_mirror}/meta/1.0/index-user" | meta_to_table | gum table --widths=10,10,10,0,0,0 --height=10)
-		selection=$(${dl_cmd} -Ss "${lxc_mirror}" | html_to_meta | meta_to_table | gum table --widths=10,10,0,10,0,0 --height=10)
+		# selection=$(${dl_cmd} "${lxc_mirror}/meta/1.0/index-user" | meta_to_table | gum table --widths=10,10,10,0,0,0 --height=10)
+		selection=$(${dl_cmd} "${lxc_mirror}" | html_to_meta | meta_to_table | gum table --widths=10,10,0,10,0,0 --height=10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
@@ -116,10 +116,11 @@ command_archive() {
 	fi
 
 	rootfs_name=$(choose_rootfs)
+	# shellcheck disable=SC2046
 	compression_tool=$(gum choose --header="Choose a compression tool:" $(
 		for tool in gzip pigz xz; do
 			if command -v ${tool} >/dev/null; then
-				printf "${tool} "
+				printf "%s " "${tool}"
 			fi
 		done
 	))
