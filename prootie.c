@@ -524,6 +524,7 @@ Options:\n\
 \n\
 PRoot relavent options:\n\
   -b, --bind, -m, --mount\n\
+  -w, --pwd, --cwd\n\
   --no-kill-on-exit\n\
   --link2symlink\n\
   --no-link2symlink\n\
@@ -568,6 +569,7 @@ PRoot relavent options:\n\
       {"bind", required_argument, NULL, 'b'},
       {"mount", required_argument, NULL, 'm'},
       {"cwd", required_argument, NULL, 'w'},
+      {"pwd", required_argument, NULL, 'w'},
       {"kernel-release", required_argument, NULL, 'k'},
       {"qemu", required_argument, NULL, 'q'},
       {"host-utils", no_argument, &options.host_utils, 1},

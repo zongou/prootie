@@ -451,6 +451,7 @@ Options:
   
 PRoot relavent options:
   -b, --bind, -m, --mount
+  -w, --pwd, --cwd
   --no-kill-on-exit
   --link2symlink
   --no-link2symlink
@@ -499,8 +500,11 @@ PRoot relavent options:
 				_opt_bindings="${_opt_bindings+${_opt_bindings} }\"${_opt_val}\""
 				shift
 				;;
-			--cwd=* | --pwd=*)
-				_opt_cwd="$(get_longopt_val "$1")"
+			-w | --cwd=* | --pwd=*)
+				case "$1" in
+				-w) shift && _opt_cwd="$1" ;;
+				*) _opt_cwd="$(get_longopt_val "$1")" ;;
+				esac
 				shift
 				;;
 			--host-utils)
