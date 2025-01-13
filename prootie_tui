@@ -143,10 +143,10 @@ command_archive() {
 }
 
 main() {
-	CMD_INSTALL=install
-	CMD_LOGIN=login
-	CMD_ARCHIVE=archive
-	CMD_EXIT=exit
+	CMD_INSTALL="install"
+	CMD_LOGIN="login"
+	CMD_ARCHIVE="archive"
+	CMD_EXIT="exit"
 	if test $# -gt 0; then
 		case "$1" in
 		"${CMD_INSTALL}") command_install ;;
