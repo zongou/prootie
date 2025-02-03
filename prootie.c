@@ -35,6 +35,7 @@ may be helpful.
   }
 
 int is_verbose;
+int is_forced;
 char *program;
 char *help_info;
 char *command;
@@ -80,6 +81,27 @@ void sigint_handler(int signum) {
   // printf("Caught SIGINT. Custom handler in action...\n");
   // printf("Changing signal handler back to default...\n");
   // signal(SIGINT, SIG_DFL); // Reset to default handler
+}
+
+// Function to check if the current process is being traced
+int is_traced() {
+  FILE *status_file = fopen("/proc/self/status", "r");
+  if (!status_file) {
+    perror("Failed to open /proc/self/status");
+    return 0;
+  }
+
+  char line[256];
+  while (fgets(line, sizeof(line), status_file)) {
+    if (strncmp(line, "TracerPid:", 10) == 0) {
+      int tracer_pid = atoi(line + 10);
+      fclose(status_file);
+      return tracer_pid != 0;
+    }
+  }
+
+  fclose(status_file);
+  return 0;
 }
 
 int command_install(int argc, char *argv[]) {
@@ -936,6 +958,7 @@ Tar relavent options:\n\
 
 int main(int argc, char *argv[]) {
   is_verbose = 0;
+  is_forced = 0;
   program = basename(argv[0]);
 
   // Disable automatic error messages from getopt_long
@@ -949,22 +972,23 @@ int main(int argc, char *argv[]) {
   help_info = my_asprintf("\
 Supercharges your PRoot experience.\n\
 \n\
-Usage:\n\
+USAGE:\n\
   %s [OPTION...] [COMMAND]\n\
 \n\
   ## show help of a command\n\
   %s [COMMAND] --help\n\
 \n\
-Options:\n\
+GLOBAL OPTIONS:\n\
   -h, --help          show this help\n\
   -v, --verbose       print more information\n\
+  -f, --force         skip trace check\n\
 \n\
-Commands:\n\
+COMMANDS:\n\
   install             install rootfs\n\
   login               login rootfs\n\
   archive             archive rootfs\n\
 \n\
-Environment variables:\n\
+ENVIRONMENT VARIABLES:\n\
   PROOT               path to proot\n\
 ",
                           program, program, program);
@@ -973,16 +997,27 @@ Environment variables:\n\
   for (int i = 1; i < argc; i++) {
     switch (argv[i][0]) {
     case '-':
-      if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
+      if (strcmp("-v", argv[i]) == 0 || strcmp("--verbose", argv[i]) == 0) {
         is_verbose = 1;
-      } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      } else if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
         fputs(help_info, stderr);
+      } else if (strcmp("-f", argv[i]) == 0 ||
+                 strcmp("--force", argv[i]) == 0) {
+        is_forced = 1;
       } else {
         fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[i]);
         return EXIT_FAILURE;
       }
       break;
     default:
+      // Check if the process is being traced
+      if (is_traced() && !is_forced) {
+        fprintf(stderr, "Process is being traced already, possibly it was started with "
+                        "proot and will have performance impact, pass "
+                        "-f or --force to skip this check.\n");
+        exit(EXIT_FAILURE);
+      }
+
       command = argv[i];
       int forwarded_argc = argc - i;
       char **forwarded_argv = argv + i;

@@ -73,6 +73,18 @@ set_proot_env() {
 	fi
 }
 
+# Function to check if the current process is being traced
+is_traced() {
+	if [ -f /proc/self/status ]; then
+		if grep -q '^TracerPid:[[:space:]]*0$' /proc/self/status; then
+			return 1 # Not traced
+		else
+			return 0 # Traced
+		fi
+	fi
+	return 1 # Assume not traced if /proc/self/status is not accessible
+}
+
 command_install() {
 	_show_help() {
 		msg "\
@@ -870,27 +882,29 @@ main() {
 		msg "\
 Supercharges your PRoot experience.
 
-Usage:
+USAGE:
   ${PROGRAM} [OPTION...] [COMMAND]
 
   ## show help of a command
   ${PROGRAM} [COMMAND] --help
 
-Options:
+GLOBAL OPTIONS:
   -h, --help          show this help
   -v, --verbose       print more information
+  -f, --force         skip trace check
 
-Commands:
+COMMANDS:
   install             install rootfs
   login               login rootfs
   archive             archive rootfs
 
-Related environment variables:
+ENVIRONMENT VARIABLES:
   PROOT               path to proot\
 "
 	}
 
 	script_opt_is_verbose=false
+	is_forced=false
 	link2symlink_default=false
 	if is_android; then
 		link2symlink_default=true
@@ -899,7 +913,6 @@ Related environment variables:
 	if test $# -eq 0; then
 		_show_help
 	else
-
 		while test $# -gt 0; do
 			case "$1" in
 			-v | --verbose)
@@ -910,8 +923,16 @@ Related environment variables:
 				_show_help
 				exit
 				;;
+			-f | --force)
+				shift
+				is_forced=true
+				;;
 			-*) error_exit_unknown_option "$1" ;;
 			install | login | archive)
+				if is_traced && ! ${is_forced}; then
+					msg "Process is being traced already, possibly it was started with proot and will have performance impact, pass -f or --force to skip this check."
+					exit 1
+				fi
 				COMMAND="$1"
 				case "$1" in
 				install) shift && command_install "$@" ;;
