@@ -1012,9 +1012,10 @@ ENVIRONMENT VARIABLES:\n\
     default:
       // Check if the process is being traced
       if (is_traced() && !is_forced) {
-        fprintf(stderr, "Process is being traced already, possibly it was started with "
-                        "proot and will have performance impact, pass "
-                        "-f or --force to skip this check.\n");
+        fprintf(stderr, "%s: %s\n", program,
+                "Process is being traced already, possibly it was started with "
+                "proot and will have performance impact, pass "
+                "-f or --force to skip this check.");
         exit(EXIT_FAILURE);
       }
 

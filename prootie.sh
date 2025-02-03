@@ -1,11 +1,11 @@
 ## THIS SCRIPT IS WRITTEN IN POSIX SHELL
 set -eu
 
-PROGRAM="$(basename "$0")"
+program="$(basename "$0")"
 
 msg() { printf "%s\n" "$*" >&2; }
-info() { printf "%s\n" "${PROGRAM}: $*" >&2; }
-error_exit() { printf "%s: %s\n" "${PROGRAM}" "$*" >&2 && exit 1; }
+info() { printf "%s\n" "${program}: $*" >&2; }
+error_exit() { printf "%s: %s\n" "${program}" "$*" >&2 && exit 1; }
 error_exit_unknown_option() { error_exit "Unknown option '$*'"; }
 error_exit_argument_error() { error_exit "Argument error: '$*'"; }
 
@@ -91,7 +91,7 @@ command_install() {
 Install rootfs to the specific dir from stdin.
 
 Usage:
-  ${PROGRAM} ${COMMAND} [OPTION...] [ROOTFS]
+  ${program} ${COMMAND} [OPTION...] [ROOTFS]
 
 Options:
   --help              show this help
@@ -451,10 +451,10 @@ Start login shell of the specific rootfs.
 
 Usage:
   ## Start login shell as root
-  ${PROGRAM} ${COMMAND} [OPTION...] [ROOTFS]
+  ${program} ${COMMAND} [OPTION...] [ROOTFS]
   
   ## Execute a command
-  ${PROGRAM} ${COMMAND} [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]
+  ${program} ${COMMAND} [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]
 
 Options:
   -h, --help          show this help
@@ -787,7 +787,7 @@ command_archive() {
 Archive the specific rootfs to stdout.
 
 Usage:
-  ${PROGRAM} ${COMMAND} [ROOTFS]
+  ${program} ${COMMAND} [ROOTFS]
 
 Options:
   --help              show this help
@@ -883,10 +883,10 @@ main() {
 Supercharges your PRoot experience.
 
 USAGE:
-  ${PROGRAM} [OPTION...] [COMMAND]
+  ${program} [OPTION...] [COMMAND]
 
   ## show help of a command
-  ${PROGRAM} [COMMAND] --help
+  ${program} [COMMAND] --help
 
 GLOBAL OPTIONS:
   -h, --help          show this help
@@ -930,10 +930,10 @@ ENVIRONMENT VARIABLES:
 			-*) error_exit_unknown_option "$1" ;;
 			install | login | archive)
 				if is_traced && ! ${is_forced}; then
-					msg "Process is being traced already, possibly it was started with proot and will have performance impact, pass -f or --force to skip this check."
+					msg "${program}: Process is being traced already, possibly it was started with proot and will have performance impact, pass -f or --force to skip this check."
 					exit 1
 				fi
-				COMMAND="$1"
+				command="$1"
 				case "$1" in
 				install) shift && command_install "$@" ;;
 				login) shift && command_login "$@" ;;
