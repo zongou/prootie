@@ -11,7 +11,7 @@ error_exit_argument_error() { error_exit "Argument error: '$*'"; }
 
 is_android() { test -f /system/bin/linker; }
 is_termux() { test "${TERMUX_VERSION+1}"; }
-is_anotherterm() { echo "${APP_ID-}" | grep -q "anotherterm"; }
+is_anotherterm() { test "${TERMSH+1}"; }
 
 ## [TITLE] [ARG]...
 list_args() {

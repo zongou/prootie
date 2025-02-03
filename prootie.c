@@ -42,7 +42,7 @@ char *command;
 char *rootfs_dir;
 int link2symlink_default;
 
-int is_android() { return access("/system/bin/app_process", F_OK) == 0; }
+int is_android() { return access("/system/bin/linker", F_OK) == 0; }
 int is_termux() { return getenv("TERMUX_VERSION") != NULL; }
 int is_anotherterm() { return getenv("TERMSH") != NULL; }
 
