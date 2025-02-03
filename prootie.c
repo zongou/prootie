@@ -106,15 +106,15 @@ int is_traced() {
 
 int command_install(int argc, char *argv[]) {
   help_info = my_asprintf("\
-Install rootfs to the specific dir from stdin.\n\
+Install the rootfs to a specific directory from standard input.\n\
 \n\
 Usage:\n\
   %s %s [OPTION...] [ROOTFS]\n\
 \n\
 Options:\n\
-  --help              show this help\n\
+  --help              Show this help.\n\
 \n\
-Tar relavent options:\n\
+Tar-related options:\n\
   -v, --verbose\n\
   --exclude\n\
 ",
@@ -530,7 +530,7 @@ export TERMSH='%s/libtermsh.so'\n\
 
 int command_login(int argc, char *argv[]) {
   help_info = my_asprintf("\
-Start login shell of the specific rootfs.\n\
+Start a login shell in the specified rootfs.\n\
 \n\
 Usage:\n\
   ## Start login shell as root\n\
@@ -540,18 +540,18 @@ Usage:\n\
   %s %s [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]\n\
 \n\
 Options:\n\
-  -h, --help          show this help\n\
-  --host-utils        enable host utils\n\
-  --env               set environment variables\n\
+  -h, --help          Show this help.\n\
+  --host-utils        Enable host utilities.\n\
+  --env VAR=VALUE     Set environment variables.\n\
 \n\
-PRoot relavent options:\n\
+PRoot-related options:\n\
   -b, --bind, -m, --mount\n\
-  -w, --pwd, --cwd\n\
+  -w, --cwd\n\
   --no-kill-on-exit\n\
   --link2symlink\n\
   --no-link2symlink\n\
-  --no-sysvipc\n\
-  --fix-low-ports\n\
+  --no-sysvipc   \n\
+  --fix-low-ports  \n\
   -q, --qemu\n\
   -k, --kernel-release\n\
 ",
@@ -845,15 +845,15 @@ PRoot relavent options:\n\
 
 int command_archive(int argc, char *argv[]) {
   help_info = my_asprintf("\
-Archive the specific rootfs to stdout.\n\
+Archive the specified rootfs to standard output.\n\
 \n\
 Usage:\n\
   %s %s [ROOTFS]\n\
 \n\
 Options:\n\
-  --help              show this help\n\
+  --help              Show this help.\n\
 \n\
-Tar relavent options:\n\
+Tar-related options:\n\
   -v, --verbose\n\
   --exclude\n\
 ",
@@ -970,28 +970,28 @@ int main(int argc, char *argv[]) {
   }
 
   help_info = my_asprintf("\
-Supercharges your PRoot experience.\n\
+Supercharge your PRoot experience.\n\
 \n\
-USAGE:\n\
+Usage:\n\
   %s [OPTION...] [COMMAND]\n\
 \n\
-  ## show help of a command\n\
+  ## Show help for a command\n\
   %s [COMMAND] --help\n\
 \n\
-GLOBAL OPTIONS:\n\
-  -h, --help          show this help\n\
-  -v, --verbose       print more information\n\
-  -f, --force         skip trace check\n\
+Global options:\n\
+  -h, --help          Show this help.\n\
+  -v, --verbose       Print more information.\n\
+  -f, --force         Skip trace check.\n\
 \n\
-COMMANDS:\n\
-  install             install rootfs\n\
-  login               login rootfs\n\
-  archive             archive rootfs\n\
+Commands:\n\
+  install             Install rootfs.\n\
+  login               Login rootfs.\n\
+  archive             Archive rootfs.\n\
 \n\
-ENVIRONMENT VARIABLES:\n\
-  PROOT               path to proot\n\
+Environment variables:\n\
+  PROOT               Path to proot.\n\
 ",
-                          program, program, program);
+                          program, program);
   SHOW_HELP
 
   for (int i = 1; i < argc; i++) {
@@ -1013,8 +1013,8 @@ ENVIRONMENT VARIABLES:\n\
       // Check if the process is being traced
       if (is_traced() && !is_forced) {
         fprintf(stderr, "%s: %s\n", program,
-                "Process is being traced already, possibly it was started with "
-                "proot and will have performance impact, pass "
+                "Process is being traced already, possibly it is executed "
+                "under PRoot and will have a performance impact, pass "
                 "-f or --force to skip this check.");
         exit(EXIT_FAILURE);
       }

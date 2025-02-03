@@ -88,15 +88,15 @@ is_traced() {
 command_install() {
 	_show_help() {
 		msg "\
-Install rootfs to the specific dir from stdin.
+Install rootfs to the specific directory from stdin.
 
 Usage:
-  ${program} ${COMMAND} [OPTION...] [ROOTFS]
+  ${program} ${command} [OPTION...] [ROOTFS]
 
 Options:
-  --help              show this help
+  --help              Show this help.
 
-Tar relavent options:
+Tar-related options:
   -v, --verbose
   --exclude\
 "
@@ -447,28 +447,28 @@ Tar relavent options:
 command_login() {
 	_show_help() {
 		msg "\
-Start login shell of the specific rootfs.
+Start a login shell in the specified rootfs.
 
 Usage:
   ## Start login shell as root
-  ${program} ${COMMAND} [OPTION...] [ROOTFS]
+  ${program} ${command} [OPTION...] [ROOTFS]
   
   ## Execute a command
-  ${program} ${COMMAND} [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]
+  ${program} ${command} [OPTION...] [ROOTFS] -- [COMMAND [ARG]...]
 
 Options:
-  -h, --help          show this help
-  --host-utils        enable host utils
-  --env               set environment variables
+  -h, --help          Show this help.
+  --host-utils        Enable host utilities.
+  --env VAR=VALUE     Set environment variables.
   
-PRoot relavent options:
+PRoot-related options:
   -b, --bind, -m, --mount
-  -w, --pwd, --cwd
+  -w, --cwd
   --no-kill-on-exit
   --link2symlink
   --no-link2symlink
-  --no-sysvipc
-  --fix-low-ports
+  --no-sysvipc   
+  --fix-low-ports  
   -q, --qemu
   -k, --kernel-release\
 "
@@ -784,15 +784,15 @@ PRoot relavent options:
 command_archive() {
 	_show_help() {
 		msg "\
-Archive the specific rootfs to stdout.
+Archive the specified rootfs to stdout.
 
 Usage:
-  ${program} ${COMMAND} [ROOTFS]
+  ${program} ${command} [ROOTFS]
 
 Options:
-  --help              show this help
+  --help              Show this help.
 
-Tar relavent options:
+Tar-related options:
   -v, --verbose
   --exclude\
 "
@@ -882,24 +882,24 @@ main() {
 		msg "\
 Supercharges your PRoot experience.
 
-USAGE:
+Usage:
   ${program} [OPTION...] [COMMAND]
 
-  ## show help of a command
+  ## Show help for a command
   ${program} [COMMAND] --help
 
-GLOBAL OPTIONS:
-  -h, --help          show this help
-  -v, --verbose       print more information
-  -f, --force         skip trace check
+Global options:
+  -h, --help          Show this help.
+  -v, --verbose       Print more information.
+  -f, --force         Skip trace check.
 
-COMMANDS:
-  install             install rootfs
-  login               login rootfs
-  archive             archive rootfs
+Commands:
+  install             Install rootfs.
+  login               Login rootfs.
+  archive             Archive rootfs.
 
-ENVIRONMENT VARIABLES:
-  PROOT               path to proot\
+Environment variables:
+  PROOT               Path to proot.\
 "
 	}
 
@@ -930,7 +930,7 @@ ENVIRONMENT VARIABLES:
 			-*) error_exit_unknown_option "$1" ;;
 			install | login | archive)
 				if is_traced && ! ${is_forced}; then
-					msg "${program}: Process is being traced already, possibly it was started with proot and will have performance impact, pass -f or --force to skip this check."
+					msg "${program}: Process is being traced already, possibly it is executed under PRoot and will have a performance impact, pass -f or --force to skip this check."
 					exit 1
 				fi
 				command="$1"
