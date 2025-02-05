@@ -763,7 +763,7 @@ PRoot-related options:
 	## Start user command or default shell
 	if test "${args+1}"; then
 		for l in ${args}; do
-			set -- "$@" "$(echo $l | base64 -d)"
+			set -- "$@" "$(echo "$l" | base64 -d)"
 		done
 	else
 		## If no argument command, login to root default shell

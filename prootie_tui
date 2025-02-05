@@ -4,6 +4,17 @@ set -eu
 DISTROS_DIR="${HOME}/.distros"
 BACKUPS_DIR="${HOME}/.distros/.backup"
 
+download_to_stdout() {
+	if command -v curl >/dev/null; then
+		curl -SsLk "$@"
+	elif command -v wget >/dev/null; then
+		wget -O- -q --no-check-certificate "$@"
+	else
+		msg "Cannot find curl or wget"
+		exit 1
+	fi
+}
+
 choose_rootfs() {
 	find "${DISTROS_DIR}" -maxdepth 1 -mindepth 1 -type d -not -name ".*" -exec basename {} \; | gum choose --header="Choose a rootfs:"
 }
@@ -75,8 +86,8 @@ command_install() {
 			dl_cmd="wget -qO-"
 		fi
 
-		# selection=$(${dl_cmd} "${lxc_mirror}/meta/1.0/index-user" | meta_to_table | gum table --widths=10,10,10,0,0,0 --height=10)
-		selection=$(${dl_cmd} "${lxc_mirror}" | html_to_meta | meta_to_table | gum table --widths=10,10,0,10,0,0 --height=10)
+		# selection=$(download_to_stdout "${lxc_mirror}/meta/1.0/index-user" | meta_to_table | gum table --widths=10,10,10,0,0,0 --height=10)
+		selection=$(download_to_stdout "${lxc_mirror}" | html_to_meta | meta_to_table | gum table --widths=10,10,0,10,0,0 --height=10)
 		if [ -z "${selection}" ]; then
 			exit 1
 		fi
@@ -90,7 +101,7 @@ command_install() {
 		archive_url=${lxc_mirror}/images/${distro}/${release}/${arch}/${variant}/${timestamp}/rootfs.tar.xz
 		rootfs_default=${DISTROS_DIR}/${distro}-${release}-${variant}
 		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs_default}" --placeholder="Input rootfs")
-		${dl_cmd} "${archive_url}" | xz -d | prootie install -v "${rootfs}"
+		download_to_stdout "${archive_url}" | xz -d | prootie install -v "${rootfs}"
 
 		case "${distro}" in
 		ubuntu) touch "${rootfs}/root/.hushlogin" ;;
