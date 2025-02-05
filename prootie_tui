@@ -6,11 +6,11 @@ BACKUPS_DIR="${HOME}/.distros/.backup"
 
 download_to_stdout() {
 	if command -v curl >/dev/null; then
-		curl -SsLk "$@"
+		curl -LkS -s "$@"
 	elif command -v wget >/dev/null; then
-		wget -O- -q --no-check-certificate "$@"
+		wget -O- --no-check-certificate -q "$@"
 	else
-		msg "Cannot find curl or wget"
+		printf "%s: %s\n" "$(basename "$0")" "Cannot find curl or wget" >&2
 		exit 1
 	fi
 }
