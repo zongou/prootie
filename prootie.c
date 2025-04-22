@@ -22,90 +22,90 @@ may be helpful.
 #include "utils/getpw.c"
 #include "utils/utils.c"
 
-#define FMT_PROOT_DATA_DIR "%s/.proot"
-#define FMT_PROOT_L2S_DIR "%s/.proot/l2s"
+#define FMT_PROOT_DATA_DIR       "%s/.proot"
+#define FMT_PROOT_L2S_DIR        "%s/.proot/l2s"
 #define FMT_PROOT_FAKEROOTFS_DIR "%s/.proot/rootfs"
-#define HOT_UTILS "host_utils.sh"
+#define HOT_UTILS                "host_utils.sh"
 
 #define ROOTFS_NOT_SET fprintf(stderr, "%s: Rootfs not set.\n", program);
-#define SHOW_HELP                                                              \
-  if (argc < 2) {                                                              \
-    fputs(help_info, stderr);                                                  \
-    return EXIT_FAILURE;                                                       \
-  }
+#define SHOW_HELP                 \
+    if (argc < 2) {               \
+        fputs(help_info, stderr); \
+        return EXIT_FAILURE;      \
+    }
 
-int is_verbose;
-int is_forced;
+int   is_verbose;
+int   is_forced;
 char *program;
 char *help_info;
 char *command;
 char *rootfs_dir;
-int link2symlink_default;
+int   link2symlink_default;
 
 int is_android() { return access("/system/bin/linker", F_OK) == 0; }
 int is_termux() { return getenv("TERMUX_VERSION") != NULL; }
 int is_anotherterm() { return getenv("TERMSH") != NULL; }
 
 void set_proot_path(char ***strlistp) {
-  char *proot_path = NULL;
-  if ((proot_path = getenv("PROOT")) != NULL) {
-    strlist_addl(strlistp, proot_path, NULL);
-  } else if ((proot_path = get_tool_path("proot")) != NULL) {
-    strlist_addl(strlistp, proot_path, NULL);
-  } else {
-    fprintf(stderr, "%s: Cannot find proot.\n", program);
-    exit(EXIT_FAILURE);
-  }
+    char *proot_path = NULL;
+    if ((proot_path = getenv("PROOT")) != NULL) {
+        strlist_addl(strlistp, proot_path, NULL);
+    } else if ((proot_path = get_tool_path("proot")) != NULL) {
+        strlist_addl(strlistp, proot_path, NULL);
+    } else {
+        fprintf(stderr, "%s: Cannot find proot.\n", program);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void set_proot_env(char ***strlistp) {
-  strlist_addl(
-      strlistp,
-      my_asprintf("PROOT_L2S_DIR=%s",
-                  my_asprintf(FMT_PROOT_L2S_DIR, rootfs_dir, getpid())),
-      NULL);
+    strlist_addl(
+        strlistp,
+        my_asprintf("PROOT_L2S_DIR=%s",
+                    my_asprintf(FMT_PROOT_L2S_DIR, rootfs_dir, getpid())),
+        NULL);
 
-  char *tmp = NULL;
-  if ((tmp = getenv("PROOT_TMP_DIR")) != NULL) {
-    strlist_addl(strlistp, my_asprintf("PROOT_TMP_DIR=%s", tmp), NULL);
-    return;
-  }
+    char *tmp = NULL;
+    if ((tmp = getenv("PROOT_TMP_DIR")) != NULL) {
+        strlist_addl(strlistp, my_asprintf("PROOT_TMP_DIR=%s", tmp), NULL);
+        return;
+    }
 
-  if ((tmp = getenv("TMPDIR")) != NULL) {
-    strlist_addl(strlistp, my_asprintf("PROOT_TMP_DIR=%s", tmp), NULL);
-    return;
-  }
+    if ((tmp = getenv("TMPDIR")) != NULL) {
+        strlist_addl(strlistp, my_asprintf("PROOT_TMP_DIR=%s", tmp), NULL);
+        return;
+    }
 }
 
 void sigint_handler(int signum) {
-  // printf("Caught SIGINT. Custom handler in action...\n");
-  // printf("Changing signal handler back to default...\n");
-  // signal(SIGINT, SIG_DFL); // Reset to default handler
+    // printf("Caught SIGINT. Custom handler in action...\n");
+    // printf("Changing signal handler back to default...\n");
+    // signal(SIGINT, SIG_DFL); // Reset to default handler
 }
 
 // Function to check if the current process is being traced
 int is_traced() {
-  FILE *status_file = fopen("/proc/self/status", "r");
-  if (!status_file) {
-    perror("Failed to open /proc/self/status");
-    return 0;
-  }
-
-  char line[256];
-  while (fgets(line, sizeof(line), status_file)) {
-    if (strncmp(line, "TracerPid:", 10) == 0) {
-      int tracer_pid = atoi(line + 10);
-      fclose(status_file);
-      return tracer_pid != 0;
+    FILE *status_file = fopen("/proc/self/status", "r");
+    if (!status_file) {
+        perror("Failed to open /proc/self/status");
+        return 0;
     }
-  }
 
-  fclose(status_file);
-  return 0;
+    char line[256];
+    while (fgets(line, sizeof(line), status_file)) {
+        if (strncmp(line, "TracerPid:", 10) == 0) {
+            int tracer_pid = atoi(line + 10);
+            fclose(status_file);
+            return tracer_pid != 0;
+        }
+    }
+
+    fclose(status_file);
+    return 0;
 }
 
 int command_install(int argc, char *argv[]) {
-  help_info = my_asprintf("\
+    help_info = my_asprintf("\
 Install the rootfs to a specific directory from standard input.\n\
 \n\
 Usage:\n\
@@ -118,148 +118,148 @@ Tar-related options:\n\
   -v, --verbose\n\
   --exclude\n\
 ",
-                          program, command);
-  SHOW_HELP
+                            program, command);
+    SHOW_HELP
 
-  static struct {
-    int tar_is_verbose;
-    char **tar_excludes;
-  } options;
+    static struct {
+        int    tar_is_verbose;
+        char **tar_excludes;
+    } options;
 
-  options.tar_is_verbose = 0;
-  options.tar_excludes = NULL;
+    options.tar_is_verbose = 0;
+    options.tar_excludes   = NULL;
 
-  int option_index = 0;
-  int c;
+    int option_index = 0;
+    int c;
 
-  static struct option long_options[] = {
-      {"help", no_argument, NULL, 'h'},
-      {"verbose", no_argument, NULL, 'v'},
-      {"exclude", required_argument, NULL, 0},
-      {NULL, 0, NULL, 0}};
+    static struct option long_options[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"verbose", no_argument, NULL, 'v'},
+        {"exclude", required_argument, NULL, 0},
+        {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hv", long_options, &option_index)) !=
-         -1) {
-    switch (c) {
-    case 0:
-      if (strcmp("exclude", long_options[option_index].name) == 0) {
-        if (options.tar_excludes == NULL) {
-          options.tar_excludes = strlist_new();
+    while ((c = getopt_long(argc, argv, "hv", long_options, &option_index)) !=
+           -1) {
+        switch (c) {
+            case 0:
+                if (strcmp("exclude", long_options[option_index].name) == 0) {
+                    if (options.tar_excludes == NULL) {
+                        options.tar_excludes = strlist_new();
+                    }
+                    strlist_addl(&options.tar_excludes, optarg, NULL);
+                }
+                break;
+            case 'h':
+                fputs(help_info, stderr);
+                return EXIT_SUCCESS;
+            case 'v':
+                options.tar_is_verbose = 1;
+                break;
+            case '?':
+                fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
+                return EXIT_FAILURE;
+                break;
+            default:
+                abort();
         }
-        strlist_addl(&options.tar_excludes, optarg, NULL);
-      }
-      break;
-    case 'h':
-      fputs(help_info, stderr);
-      return EXIT_SUCCESS;
-    case 'v':
-      options.tar_is_verbose = 1;
-      break;
-    case '?':
-      fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
-      return EXIT_FAILURE;
-      break;
-    default:
-      abort();
     }
-  }
 
-  if (optind < argc) {
-    if (access(argv[optind], F_OK) != 0) {
-      mkdir_wrapper(argv[optind]);
-      rootfs_dir = realpath(argv[optind], NULL);
-      optind = optind + 1;
+    if (optind < argc) {
+        if (access(argv[optind], F_OK) != 0) {
+            mkdir_wrapper(argv[optind]);
+            rootfs_dir = realpath(argv[optind], NULL);
+            optind     = optind + 1;
+        } else {
+            fprintf(stderr, "%s: Rootfs '%s' already exists.\n", program,
+                    argv[optind]);
+            return EXIT_FAILURE;
+        }
     } else {
-      fprintf(stderr, "%s: Rootfs '%s' already exists.\n", program,
-              argv[optind]);
-      return EXIT_FAILURE;
-    }
-  } else {
-    ROOTFS_NOT_SET
-    return EXIT_FAILURE;
-  }
-
-  char **proot_envp = strlist_new();
-  char **proot_argv = strlist_new();
-
-  set_proot_env(&proot_envp);
-
-  set_proot_path(&proot_argv);
-  strlist_addl(&proot_argv, "--link2symlink", "--root-id", NULL);
-
-  char *tar_path = NULL;
-  if ((tar_path = get_tool_path("tar")) != NULL) {
-    strlist_addl(&proot_argv, tar_path, NULL);
-  } else {
-    fprintf(stderr, "%s: Cannot find tar\n", program);
-    return EXIT_FAILURE;
-  }
-
-  if (options.tar_is_verbose) {
-    strlist_addl(&proot_argv, "-v", NULL);
-  }
-
-  strlist_addl(&proot_argv, "--exclude=dev", "--exclude=./dev", NULL);
-  strlist_addl(&proot_argv, "-C", rootfs_dir, "-x", NULL);
-  if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
-    for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
-      strlist_addl(&proot_argv,
-                   my_asprintf("--exclude=%s", options.tar_excludes[i]), NULL);
-    }
-  }
-
-  pid_t pid;
-  pid = fork();
-  if (pid < 0) {
-    perror("fork");
-    return EXIT_FAILURE;
-  } else if (pid == 0) {
-    if (is_verbose) {
-      strlist_list(proot_envp, "proot_envp");
-      strlist_list(proot_argv, "proot_argv");
-    }
-    // close(STDERR_FILENO);
-    mkdir_wrapper(my_asprintf(FMT_PROOT_DATA_DIR, rootfs_dir));
-    mkdir_wrapper(my_asprintf(FMT_PROOT_L2S_DIR, rootfs_dir));
-    execve(proot_argv[0], proot_argv, proot_envp);
-    perror("execve");
-  } else {
-    int status;
-    signal(SIGINT, sigint_handler);
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status)) {
-      if (WEXITSTATUS(status) != 0) {
-        fprintf(stderr, "%s: Child exited with status: %d\n", program, status);
-        fprintf(stderr, "%s: Failed.\n", program);
-        fprintf(stderr, "%s: Cleaning up...\n", program);
-        system(my_asprintf("chmod +rw -R %s", rootfs_dir));
-        system(my_asprintf("rm -rf %s", rootfs_dir));
+        ROOTFS_NOT_SET
         return EXIT_FAILURE;
-      }
-    } else {
-      fprintf(stderr, "%s: Child did not terminate normally.\n", program);
-      return EXIT_FAILURE;
     }
-  }
 
-  mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR, rootfs_dir));
-  mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc", rootfs_dir));
+    char **proot_envp = strlist_new();
+    char **proot_argv = strlist_new();
 
-  fputs("0.00 0.00 0.00 0/0 0\n",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/loadavg", rootfs_dir),
-              "w"));
-  fputs("cpu  0 0 0 0 0 0 0 0 0 0\n",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/stat", rootfs_dir),
-              "w"));
-  fputs("0.00 0.00\n",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/uptime", rootfs_dir),
-              "w"));
-  fputs("\
+    set_proot_env(&proot_envp);
+
+    set_proot_path(&proot_argv);
+    strlist_addl(&proot_argv, "--link2symlink", "--root-id", NULL);
+
+    char *tar_path = NULL;
+    if ((tar_path = get_tool_path("tar")) != NULL) {
+        strlist_addl(&proot_argv, tar_path, NULL);
+    } else {
+        fprintf(stderr, "%s: Cannot find tar\n", program);
+        return EXIT_FAILURE;
+    }
+
+    if (options.tar_is_verbose) {
+        strlist_addl(&proot_argv, "-v", NULL);
+    }
+
+    strlist_addl(&proot_argv, "--exclude=dev", "--exclude=./dev", NULL);
+    strlist_addl(&proot_argv, "-C", rootfs_dir, "-x", NULL);
+    if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
+        for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
+            strlist_addl(&proot_argv,
+                         my_asprintf("--exclude=%s", options.tar_excludes[i]), NULL);
+        }
+    }
+
+    pid_t pid;
+    pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return EXIT_FAILURE;
+    } else if (pid == 0) {
+        if (is_verbose) {
+            strlist_list(proot_envp, "proot_envp");
+            strlist_list(proot_argv, "proot_argv");
+        }
+        // close(STDERR_FILENO);
+        mkdir_wrapper(my_asprintf(FMT_PROOT_DATA_DIR, rootfs_dir));
+        mkdir_wrapper(my_asprintf(FMT_PROOT_L2S_DIR, rootfs_dir));
+        execve(proot_argv[0], proot_argv, proot_envp);
+        perror("execve");
+    } else {
+        int status;
+        signal(SIGINT, sigint_handler);
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status) != 0) {
+                fprintf(stderr, "%s: Child exited with status: %d\n", program, status);
+                fprintf(stderr, "%s: Failed.\n", program);
+                fprintf(stderr, "%s: Cleaning up...\n", program);
+                system(my_asprintf("chmod +rw -R %s", rootfs_dir));
+                system(my_asprintf("rm -rf %s", rootfs_dir));
+                return EXIT_FAILURE;
+            }
+        } else {
+            fprintf(stderr, "%s: Child did not terminate normally.\n", program);
+            return EXIT_FAILURE;
+        }
+    }
+
+    mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR, rootfs_dir));
+    mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc", rootfs_dir));
+
+    fputs("0.00 0.00 0.00 0/0 0\n",
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/loadavg", rootfs_dir),
+                "w"));
+    fputs("cpu  0 0 0 0 0 0 0 0 0 0\n",
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/stat", rootfs_dir),
+                "w"));
+    fputs("0.00 0.00\n",
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/uptime", rootfs_dir),
+                "w"));
+    fputs("\
 Linux localhost 6.1.0-22 #1 SMP PREEMPT_DYNAMIC 6.1.94-1 (2024-06-21) GNU/Linux\n\
 ",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/version", rootfs_dir),
-              "w"));
-  fputs("\
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/version", rootfs_dir),
+                "w"));
+    fputs("\
 nr_free_pages 136777\n\
 nr_zone_inactive_anon 14538\n\
 nr_zone_active_anon 215\n\
@@ -420,43 +420,43 @@ direct_map_level2_splits 28\n\
 direct_map_level3_splits 0\n\
 nr_unstable 0\n\
 ",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/vmstat", rootfs_dir),
-              "w"));
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/vmstat", rootfs_dir),
+                "w"));
 
-  mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys", rootfs_dir));
-  mkdir_wrapper(
-      my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys/kernel", rootfs_dir));
-  fputs("40\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
-                                  "/proc/sys/kernel/cap_last_cap",
-                                  rootfs_dir),
-                      "w"));
+    mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys", rootfs_dir));
+    mkdir_wrapper(
+        my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys/kernel", rootfs_dir));
+    fputs("40\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
+                                    "/proc/sys/kernel/cap_last_cap",
+                                    rootfs_dir),
+                        "w"));
 
-  mkdir_wrapper(
-      my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys/fs", rootfs_dir));
-  mkdir_wrapper(
-      my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys/fs/inotify", rootfs_dir));
-  fputs("16384\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
-                                     "/proc/sys/fs/inotify/max_queued_events",
+    mkdir_wrapper(
+        my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys/fs", rootfs_dir));
+    mkdir_wrapper(
+        my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/proc/sys/fs/inotify", rootfs_dir));
+    fputs("16384\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
+                                       "/proc/sys/fs/inotify/max_queued_events",
+                                       rootfs_dir),
+                           "w"));
+    fputs("128\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
+                                     "/proc/sys/fs/inotify/max_user_instances",
                                      rootfs_dir),
                          "w"));
-  fputs("128\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
-                                   "/proc/sys/fs/inotify/max_user_instances",
-                                   rootfs_dir),
-                       "w"));
-  fputs("65536\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
-                                     "/proc/sys/fs/inotify/max_user_watches",
-                                     rootfs_dir),
-                         "w"));
+    fputs("65536\n", fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR
+                                       "/proc/sys/fs/inotify/max_user_watches",
+                                       rootfs_dir),
+                           "w"));
 
-  mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc", rootfs_dir));
-  fputs("\
+    mkdir_wrapper(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc", rootfs_dir));
+    fputs("\
 nameserver 8.8.8.8\n\
 nameserver 8.8.4.4\n\
 ",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/resolv.conf",
-                          rootfs_dir),
-              "w"));
-  fputs("\
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/resolv.conf",
+                            rootfs_dir),
+                "w"));
+    fputs("\
 # IPv4.\n\
 127.0.0.1   localhost.localdomain localhost\n\
 \n\
@@ -468,20 +468,20 @@ ff02::1     ip6-allnodes\n\
 ff02::2     ip6-allrouters\n\
 ff02::3     ip6-allhosts\n\
 ",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/hosts", rootfs_dir),
-              "w"));
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/hosts", rootfs_dir),
+                "w"));
 
-  mkdir_wrapper(
-      my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d", rootfs_dir));
-  fputs("\
+    mkdir_wrapper(
+        my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d", rootfs_dir));
+    fputs("\
 export CHARSET=${CHARSET:-UTF-8}\n\
 export LANG=${LANG:-C.UTF-8}\n\
 export LC_COLLATE=${LC_COLLATE:-C}\n\
 ",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d/locale.sh",
-                          rootfs_dir),
-              "w"));
-  fputs("\
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d/locale.sh",
+                            rootfs_dir),
+                "w"));
+    fputs("\
 export COLORTERM=truecolor\n\
 [ -z \"\\$LANG\" ] && export LANG=C.UTF-8\n\
 export TERM=xterm-256color\n\
@@ -490,46 +490,46 @@ export PULSE_SERVER=127.0.0.1\n\
 export MOZ_FAKE_NO_SANDBOX=1\n\
 export CHROMIUM_FLAGS=--no-sandbox\n\
 ",
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d/proot.sh",
-                          rootfs_dir),
-              "w"));
+          fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d/proot.sh",
+                            rootfs_dir),
+                "w"));
 
-  if (is_android()) {
-    FILE *fp =
-        fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d/" HOT_UTILS,
-                          rootfs_dir),
-              "w");
-    fprintf(fp, "\
+    if (is_android()) {
+        FILE *fp =
+            fopen(my_asprintf(FMT_PROOT_FAKEROOTFS_DIR "/etc/profile.d/" HOT_UTILS,
+                              rootfs_dir),
+                  "w");
+        fprintf(fp, "\
 ## prootie host utils\n\
 export ANDROID_DATA='%s'\n\
 export ANDROID_RUNTIME_ROOT='%s'\n\
 export ANDROID_TZDATA_ROOT='%s'\n\
 export BOOTCLASSPATH='%s'\n\
 ",
-            getenv("ANDROID_DATA"), getenv("ANDROID_RUNTIME_ROOT"),
-            getenv("ANDROID_TZDATA_ROOT"), getenv("BOOTCLASSPATH"));
+                getenv("ANDROID_DATA"), getenv("ANDROID_RUNTIME_ROOT"),
+                getenv("ANDROID_TZDATA_ROOT"), getenv("BOOTCLASSPATH"));
 
-    if (is_anotherterm()) {
-      fprintf(fp, "\
+        if (is_anotherterm()) {
+            fprintf(fp, "\
 export DATA_DIR='%s'\n\
 export TERMSH_UID='%u'\n\
 export TERMSH='%s/libtermsh.so'\n\
 ",
-              getenv("DATA_DIR"), getuid(), getenv("LIB_DIR"));
+                    getenv("DATA_DIR"), getuid(), getenv("LIB_DIR"));
+        }
+
+        char *prefix_dir = getenv("PREFIX");
+        if (prefix_dir != NULL) {
+            fprintf(fp, "export PREFIX='%s'\n", prefix_dir);
+            fprintf(fp, "export PATH=\"${PATH}:${PREFIX}/bin\"\n");
+        }
     }
 
-    char *prefix_dir = getenv("PREFIX");
-    if (prefix_dir != NULL) {
-      fprintf(fp, "export PREFIX='%s'\n", prefix_dir);
-      fprintf(fp, "export PATH=\"${PATH}:${PREFIX}/bin\"\n");
-    }
-  }
-
-  return 0;
+    return 0;
 }
 
 int command_login(int argc, char *argv[]) {
-  help_info = my_asprintf("\
+    help_info = my_asprintf("\
 Start a login shell in the specified rootfs.\n\
 \n\
 Usage:\n\
@@ -555,296 +555,296 @@ PRoot-related options:\n\
   -q, --qemu\n\
   -k, --kernel-release\n\
 ",
-                          program, command, program, command);
-  SHOW_HELP
+                            program, command, program, command);
+    SHOW_HELP
 
-  static struct {
-    char *cwd;
-    int kill_on_exit;
-    int link2symlink;
-    int fix_low_ports;
-    char *kernel_release;
-    char *qemu;
-    int sysvipc;
-    char **bindings;
-    int host_utils;
-    char **env;
-  } options;
+    static struct {
+        char  *cwd;
+        int    kill_on_exit;
+        int    link2symlink;
+        int    fix_low_ports;
+        char  *kernel_release;
+        char  *qemu;
+        int    sysvipc;
+        char **bindings;
+        int    host_utils;
+        char **env;
+    } options;
 
-  options.kill_on_exit = 1;
-  options.bindings = NULL;
-  options.link2symlink = link2symlink_default;
-  options.fix_low_ports = 0;
-  options.cwd = "/root";
-  options.sysvipc = 1;
-  options.host_utils = 0;
+    options.kill_on_exit  = 1;
+    options.bindings      = NULL;
+    options.link2symlink  = link2symlink_default;
+    options.fix_low_ports = 0;
+    options.cwd           = "/root";
+    options.sysvipc       = 1;
+    options.host_utils    = 0;
 
-  int option_index = 0;
-  int c;
+    int option_index = 0;
+    int c;
 
-  static struct option long_options[] = {
-      {"help", no_argument, NULL, 'h'},
-      {"no-kill-on-exit", no_argument, &options.kill_on_exit, 0},
-      {"link2symlink", no_argument, &options.link2symlink, 1},
-      {"no-link2symlink", no_argument, &options.link2symlink, 0},
-      {"fix-low-ports", no_argument, &options.fix_low_ports, 1},
-      {"bind", required_argument, NULL, 'b'},
-      {"mount", required_argument, NULL, 'm'},
-      {"cwd", required_argument, NULL, 'w'},
-      {"pwd", required_argument, NULL, 'w'},
-      {"kernel-release", required_argument, NULL, 'k'},
-      {"qemu", required_argument, NULL, 'q'},
-      {"host-utils", no_argument, &options.host_utils, 1},
-      {"env", required_argument, NULL, 0},
-      {NULL, 0, NULL, 0}};
+    static struct option long_options[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"no-kill-on-exit", no_argument, &options.kill_on_exit, 0},
+        {"link2symlink", no_argument, &options.link2symlink, 1},
+        {"no-link2symlink", no_argument, &options.link2symlink, 0},
+        {"fix-low-ports", no_argument, &options.fix_low_ports, 1},
+        {"bind", required_argument, NULL, 'b'},
+        {"mount", required_argument, NULL, 'm'},
+        {"cwd", required_argument, NULL, 'w'},
+        {"pwd", required_argument, NULL, 'w'},
+        {"kernel-release", required_argument, NULL, 'k'},
+        {"qemu", required_argument, NULL, 'q'},
+        {"host-utils", no_argument, &options.host_utils, 1},
+        {"env", required_argument, NULL, 0},
+        {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hb:m:w:k:q:", long_options,
-                          &option_index)) != -1) {
-    switch (c) {
-    case 0:
-      /* If this option set a flag, do nothing else now. */
-      // if (long_options[option_index].flag == 0) {
-      //   printf("long_option[%d]:%s=%s", option_index,
-      //          long_options[option_index].name, optarg);
-      // }
-      if (strcmp("env", long_options[option_index].name) == 0) {
-        if (options.env == NULL) {
-          options.env = strlist_new();
+    while ((c = getopt_long(argc, argv, "hb:m:w:k:q:", long_options,
+                            &option_index)) != -1) {
+        switch (c) {
+            case 0:
+                /* If this option set a flag, do nothing else now. */
+                // if (long_options[option_index].flag == 0) {
+                //   printf("long_option[%d]:%s=%s", option_index,
+                //          long_options[option_index].name, optarg);
+                // }
+                if (strcmp("env", long_options[option_index].name) == 0) {
+                    if (options.env == NULL) {
+                        options.env = strlist_new();
+                    }
+                    strlist_addl(&options.env, optarg, NULL);
+                }
+                break;
+            case 'h':
+                fputs(help_info, stderr);
+                return EXIT_SUCCESS;
+                break;
+            case 'b':
+            case 'm':
+                if (options.bindings == NULL) {
+                    options.bindings = strlist_new();
+                }
+                strlist_addl(&options.bindings, optarg, NULL);
+                break;
+            case 'w':
+                options.cwd = optarg;
+                break;
+            case 'k':
+                options.kernel_release = optarg;
+                break;
+            case 'q':
+                options.qemu = optarg;
+                break;
+            case '?':
+                fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
+                return EXIT_FAILURE;
+                break;
+            default:
+                abort();
         }
-        strlist_addl(&options.env, optarg, NULL);
-      }
-      break;
-    case 'h':
-      fputs(help_info, stderr);
-      return EXIT_SUCCESS;
-      break;
-    case 'b':
-    case 'm':
-      if (options.bindings == NULL) {
-        options.bindings = strlist_new();
-      }
-      strlist_addl(&options.bindings, optarg, NULL);
-      break;
-    case 'w':
-      options.cwd = optarg;
-      break;
-    case 'k':
-      options.kernel_release = optarg;
-      break;
-    case 'q':
-      options.qemu = optarg;
-      break;
-    case '?':
-      fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
-      return EXIT_FAILURE;
-      break;
-    default:
-      abort();
     }
-  }
 
-  // Access non-option arguments
-  if (optind < argc) {
-    if (access(argv[optind], F_OK) == 0) {
-      rootfs_dir = realpath(argv[optind], NULL);
-      optind = optind + 1;
+    // Access non-option arguments
+    if (optind < argc) {
+        if (access(argv[optind], F_OK) == 0) {
+            rootfs_dir = realpath(argv[optind], NULL);
+            optind     = optind + 1;
+        } else {
+            fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
+            return EXIT_FAILURE;
+        }
+
+        if (strcmp("--", argv[optind - 2]) != 0 && optind < argc) {
+            printf("%s: Excessive argument '%s'.\n", program, argv[optind]);
+            return EXIT_FAILURE;
+        }
     } else {
-      fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
-      return EXIT_FAILURE;
+        ROOTFS_NOT_SET
+        return EXIT_FAILURE;
     }
 
-    if (strcmp("--", argv[optind - 2]) != 0 && optind < argc) {
-      printf("%s: Excessive argument '%s'.\n", program, argv[optind]);
-      return EXIT_FAILURE;
+    char **proot_envp       = strlist_new();
+    char **proot_argv       = strlist_new();
+    char **fakerootfs_files = strlist_new();
+    set_proot_env(&proot_envp);
+
+    set_proot_path(&proot_argv);
+    strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), NULL);
+    if (options.qemu != NULL) {
+        strlist_addl(&proot_argv, my_asprintf("--qemu=%s", options.qemu), NULL);
     }
-  } else {
-    ROOTFS_NOT_SET
-    return EXIT_FAILURE;
-  }
-
-  char **proot_envp = strlist_new();
-  char **proot_argv = strlist_new();
-  char **fakerootfs_files = strlist_new();
-  set_proot_env(&proot_envp);
-
-  set_proot_path(&proot_argv);
-  strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), NULL);
-  if (options.qemu != NULL) {
-    strlist_addl(&proot_argv, my_asprintf("--qemu=%s", options.qemu), NULL);
-  }
-  strlist_addl(&proot_argv, my_asprintf("--cwd=%s", options.cwd), NULL);
-  if (options.kill_on_exit) {
-    strlist_addl(&proot_argv, "--kill-on-exit", NULL);
-  }
-  if (options.kernel_release != NULL) {
-    strlist_addl(&proot_argv,
-                 my_asprintf("--kernel-release=%s", options.kernel_release),
-                 NULL);
-  }
-  strlist_addl(&proot_argv, "--root-id", NULL);
-  if (options.link2symlink) {
-    strlist_addl(&proot_argv, "--link2symlink", NULL);
-  }
-  if (is_android()) {
-    if (options.sysvipc) {
-      strlist_addl(&proot_argv, "--sysvipc", NULL);
+    strlist_addl(&proot_argv, my_asprintf("--cwd=%s", options.cwd), NULL);
+    if (options.kill_on_exit) {
+        strlist_addl(&proot_argv, "--kill-on-exit", NULL);
     }
-    strlist_addl(&proot_argv, "--ashmem-memfd", NULL);
-    strlist_addl(&proot_argv, "-H", NULL);
-    if (options.fix_low_ports) {
-      strlist_addl(&proot_argv, "-P", NULL);
-    }
-    strlist_addl(&proot_argv, "-L", NULL);
-  }
-
-  strlist_addl(&proot_argv, "--bind=/dev", NULL);
-  strlist_addl(&proot_argv, "--bind=/dev/urandom:/dev/random", NULL);
-  strlist_addl(&proot_argv, "--bind=/proc", NULL);
-  strlist_addl(&proot_argv, "--bind=/proc/self/fd:/dev/fd", NULL);
-  if (isatty(STDIN_FILENO)) {
-    strlist_addl(&proot_argv, "--bind=/proc/self/fd/0:/dev/stdin", NULL);
-  }
-  if (isatty(STDOUT_FILENO)) {
-    strlist_addl(&proot_argv, "--bind=/proc/self/fd/1:/dev/stdout", NULL);
-  }
-  if (isatty(STDERR_FILENO)) {
-    strlist_addl(&proot_argv, "--bind=/proc/self/fd/2:/dev/stderr", NULL);
-  }
-  strlist_addl(&proot_argv, "--bind=/sys", NULL);
-
-  // Bind fakerootfs files
-  char *fakerootfs_dir = my_asprintf(FMT_PROOT_FAKEROOTFS_DIR, rootfs_dir);
-  int prefix_len = strlen(fakerootfs_dir);
-
-  filelist(&fakerootfs_files, fakerootfs_dir);
-
-  for (int i = 0; i < strlist_len(fakerootfs_files); i++) {
-    char *path_short = strdup(fakerootfs_files[i] + prefix_len);
-
-    char *token = NULL;
-    token = strtok(strdup(path_short), "/");
-
-    if (strcmp("proc", token) == 0) {
-      if (access(path_short, R_OK) != 0) {
-        strlist_addl(
-            &proot_argv,
-            my_asprintf("--bind=%s:%s", fakerootfs_files[i], path_short), NULL);
-      }
-    } else if (strcmp(basename(path_short), HOT_UTILS) == 0) {
-      if (options.host_utils) {
-        strlist_addl(
-            &proot_argv,
-            my_asprintf("--bind=%s:%s", fakerootfs_files[i], path_short), NULL);
-      }
-    } else {
-      strlist_addl(&proot_argv,
-                   my_asprintf("--bind=%s:%s", fakerootfs_files[i], path_short),
-                   NULL);
-    }
-  }
-
-  strlist_addl(&proot_argv, my_asprintf("--bind=%s/tmp:/dev/shm", rootfs_dir),
-               NULL);
-  if (options.host_utils) {
-    if (is_android()) {
-      if (access("/system", F_OK) == 0) {
-        strlist_addl(&proot_argv, "--bind=/system", NULL);
-      }
-      if (access("/apex", F_OK) == 0) {
-        strlist_addl(&proot_argv, "--bind=/apex", NULL);
-      }
-      if (access("/linkerconfig/ld.config.txt", F_OK) == 0) {
-        strlist_addl(&proot_argv, "--bind=/linkerconfig/ld.config.txt", NULL);
-      }
-
-      if (is_anotherterm()) {
-        putenv(my_asprintf("TERMSH_UID=%d", getuid()));
+    if (options.kernel_release != NULL) {
         strlist_addl(&proot_argv,
-                     my_asprintf("--bind=%s/libtermsh.so", getenv("LIB_DIR")),
+                     my_asprintf("--kernel-release=%s", options.kernel_release),
                      NULL);
-      }
-
-      if (access("/vendor", F_OK)) {
-        strlist_addl(&proot_argv, "--bind=/vendor", NULL);
-        strlist_addl(&proot_argv, "--bind=/data/app", NULL);
-      }
-      if (is_anotherterm()) {
-        strlist_addl(&proot_argv, my_asprintf("--bind=%s", getenv("DATA_DIR")),
-                     NULL);
-      }
-
-      if (is_termux()) {
-        strlist_addl(&proot_argv, "--bind=/data/dalvik-cache", NULL);
-        if (access("/data/data/com.termux/files/apps", F_OK) == 0) {
-          strlist_addl(&proot_argv, "--bind=/data/data/com.termux/files/apps",
-                       NULL);
+    }
+    strlist_addl(&proot_argv, "--root-id", NULL);
+    if (options.link2symlink) {
+        strlist_addl(&proot_argv, "--link2symlink", NULL);
+    }
+    if (is_android()) {
+        if (options.sysvipc) {
+            strlist_addl(&proot_argv, "--sysvipc", NULL);
         }
-        strlist_addl(&proot_argv, my_asprintf("--bind=%s", getenv("PREFIX")),
-                     NULL);
-      }
-    }
-  }
-
-  if (options.bindings != NULL) {
-    for (int i = 0; i < strlist_len(options.bindings); i++) {
-      strlist_addl(&proot_argv, my_asprintf("--bind=%s", options.bindings[i]),
-                   NULL);
-    }
-  }
-
-  struct stat fileStat;
-
-  if (lstat(my_asprintf("%s/usr/bin/env", rootfs_dir), &fileStat) == 0) {
-    strlist_addl(
-        &proot_argv, "/usr/bin/env", "-i", "HOME=/root", "LANG=C.UTF-8",
-        my_asprintf("TERM=%s", getenv("TERM") != NULL ? getenv("TERM")
-                                                      : "TERM=xterm-256color"),
-        NULL);
-    if (getenv("COLORTERM") != NULL) {
-      strlist_addl(&proot_argv,
-                   my_asprintf("COLORTERM=%s", getenv("COLORTERM")), NULL);
+        strlist_addl(&proot_argv, "--ashmem-memfd", NULL);
+        strlist_addl(&proot_argv, "-H", NULL);
+        if (options.fix_low_ports) {
+            strlist_addl(&proot_argv, "-P", NULL);
+        }
+        strlist_addl(&proot_argv, "-L", NULL);
     }
 
-    if (options.host_utils && is_anotherterm()) {
-      strlist_addl(
-          &proot_argv,
-          my_asprintf("SHELL_SESSION_TOKEN=%s", getenv("SHELL_SESSION_TOKEN")),
-          NULL);
+    strlist_addl(&proot_argv, "--bind=/dev", NULL);
+    strlist_addl(&proot_argv, "--bind=/dev/urandom:/dev/random", NULL);
+    strlist_addl(&proot_argv, "--bind=/proc", NULL);
+    strlist_addl(&proot_argv, "--bind=/proc/self/fd:/dev/fd", NULL);
+    if (isatty(STDIN_FILENO)) {
+        strlist_addl(&proot_argv, "--bind=/proc/self/fd/0:/dev/stdin", NULL);
+    }
+    if (isatty(STDOUT_FILENO)) {
+        strlist_addl(&proot_argv, "--bind=/proc/self/fd/1:/dev/stdout", NULL);
+    }
+    if (isatty(STDERR_FILENO)) {
+        strlist_addl(&proot_argv, "--bind=/proc/self/fd/2:/dev/stderr", NULL);
+    }
+    strlist_addl(&proot_argv, "--bind=/sys", NULL);
+
+    // Bind fakerootfs files
+    char *fakerootfs_dir = my_asprintf(FMT_PROOT_FAKEROOTFS_DIR, rootfs_dir);
+    int   prefix_len     = strlen(fakerootfs_dir);
+
+    filelist(&fakerootfs_files, fakerootfs_dir);
+
+    for (int i = 0; i < strlist_len(fakerootfs_files); i++) {
+        char *path_short = strdup(fakerootfs_files[i] + prefix_len);
+
+        char *token = NULL;
+        token       = strtok(strdup(path_short), "/");
+
+        if (strcmp("proc", token) == 0) {
+            if (access(path_short, R_OK) != 0) {
+                strlist_addl(
+                    &proot_argv,
+                    my_asprintf("--bind=%s:%s", fakerootfs_files[i], path_short), NULL);
+            }
+        } else if (strcmp(basename(path_short), HOT_UTILS) == 0) {
+            if (options.host_utils) {
+                strlist_addl(
+                    &proot_argv,
+                    my_asprintf("--bind=%s:%s", fakerootfs_files[i], path_short), NULL);
+            }
+        } else {
+            strlist_addl(&proot_argv,
+                         my_asprintf("--bind=%s:%s", fakerootfs_files[i], path_short),
+                         NULL);
+        }
     }
 
-    if (options.env != NULL) {
-      for (int i = 0; i < strlist_len(options.env); i++) {
-        strlist_addl(&proot_argv, options.env[i], NULL);
-      }
-    }
-  }
+    strlist_addl(&proot_argv, my_asprintf("--bind=%s/tmp:/dev/shm", rootfs_dir),
+                 NULL);
+    if (options.host_utils) {
+        if (is_android()) {
+            if (access("/system", F_OK) == 0) {
+                strlist_addl(&proot_argv, "--bind=/system", NULL);
+            }
+            if (access("/apex", F_OK) == 0) {
+                strlist_addl(&proot_argv, "--bind=/apex", NULL);
+            }
+            if (access("/linkerconfig/ld.config.txt", F_OK) == 0) {
+                strlist_addl(&proot_argv, "--bind=/linkerconfig/ld.config.txt", NULL);
+            }
 
-  if (optind < argc) {
-    for (int i = optind; i < argc; i++) {
-      strlist_addl(&proot_argv, argv[i], NULL);
+            if (is_anotherterm()) {
+                putenv(my_asprintf("TERMSH_UID=%d", getuid()));
+                strlist_addl(&proot_argv,
+                             my_asprintf("--bind=%s/libtermsh.so", getenv("LIB_DIR")),
+                             NULL);
+            }
+
+            if (access("/vendor", F_OK)) {
+                strlist_addl(&proot_argv, "--bind=/vendor", NULL);
+                strlist_addl(&proot_argv, "--bind=/data/app", NULL);
+            }
+            if (is_anotherterm()) {
+                strlist_addl(&proot_argv, my_asprintf("--bind=%s", getenv("DATA_DIR")),
+                             NULL);
+            }
+
+            if (is_termux()) {
+                strlist_addl(&proot_argv, "--bind=/data/dalvik-cache", NULL);
+                if (access("/data/data/com.termux/files/apps", F_OK) == 0) {
+                    strlist_addl(&proot_argv, "--bind=/data/data/com.termux/files/apps",
+                                 NULL);
+                }
+                strlist_addl(&proot_argv, my_asprintf("--bind=%s", getenv("PREFIX")),
+                             NULL);
+            }
+        }
     }
-  } else {
-    if (access(my_asprintf("%s/etc/passwd", rootfs_dir), F_OK) == 0) {
-      strlist_addl(
-          &proot_argv,
-          getpw(my_asprintf("%s/etc/passwd", rootfs_dir), 0, 0)->pw_shell, "-l",
-          NULL);
+
+    if (options.bindings != NULL) {
+        for (int i = 0; i < strlist_len(options.bindings); i++) {
+            strlist_addl(&proot_argv, my_asprintf("--bind=%s", options.bindings[i]),
+                         NULL);
+        }
+    }
+
+    struct stat fileStat;
+
+    if (lstat(my_asprintf("%s/usr/bin/env", rootfs_dir), &fileStat) == 0) {
+        strlist_addl(
+            &proot_argv, "/usr/bin/env", "-i", "HOME=/root", "LANG=C.UTF-8",
+            my_asprintf("TERM=%s", getenv("TERM") != NULL ? getenv("TERM")
+                                                          : "TERM=xterm-256color"),
+            NULL);
+        if (getenv("COLORTERM") != NULL) {
+            strlist_addl(&proot_argv,
+                         my_asprintf("COLORTERM=%s", getenv("COLORTERM")), NULL);
+        }
+
+        if (options.host_utils && is_anotherterm()) {
+            strlist_addl(
+                &proot_argv,
+                my_asprintf("SHELL_SESSION_TOKEN=%s", getenv("SHELL_SESSION_TOKEN")),
+                NULL);
+        }
+
+        if (options.env != NULL) {
+            for (int i = 0; i < strlist_len(options.env); i++) {
+                strlist_addl(&proot_argv, options.env[i], NULL);
+            }
+        }
+    }
+
+    if (optind < argc) {
+        for (int i = optind; i < argc; i++) {
+            strlist_addl(&proot_argv, argv[i], NULL);
+        }
     } else {
-      strlist_addl(&proot_argv, "/bin/sh", "-l", NULL);
+        if (access(my_asprintf("%s/etc/passwd", rootfs_dir), F_OK) == 0) {
+            strlist_addl(
+                &proot_argv,
+                getpw(my_asprintf("%s/etc/passwd", rootfs_dir), 0, 0)->pw_shell, "-l",
+                NULL);
+        } else {
+            strlist_addl(&proot_argv, "/bin/sh", "-l", NULL);
+        }
     }
-  }
 
-  if (is_verbose) {
-    strlist_list(proot_envp, "proot_env");
-    strlist_list(proot_argv, "proot_argv");
-  }
-  execve(proot_argv[0], proot_argv, proot_envp);
+    if (is_verbose) {
+        strlist_list(proot_envp, "proot_env");
+        strlist_list(proot_argv, "proot_argv");
+    }
+    execve(proot_argv[0], proot_argv, proot_envp);
 
-  return 0;
+    return 0;
 }
 
 int command_archive(int argc, char *argv[]) {
-  help_info = my_asprintf("\
+    help_info = my_asprintf("\
 Archive the specified rootfs to standard output.\n\
 \n\
 Usage:\n\
@@ -857,119 +857,119 @@ Tar-related options:\n\
   -v, --verbose\n\
   --exclude\n\
 ",
-                          program, command);
-  SHOW_HELP
+                            program, command);
+    SHOW_HELP
 
-  static struct {
-    int tar_is_verbose;
-    char **tar_excludes;
-  } options;
+    static struct {
+        int    tar_is_verbose;
+        char **tar_excludes;
+    } options;
 
-  options.tar_is_verbose = 0;
-  options.tar_excludes = NULL;
+    options.tar_is_verbose = 0;
+    options.tar_excludes   = NULL;
 
-  int option_index = 0;
-  int c;
+    int option_index = 0;
+    int c;
 
-  static struct option long_options[] = {
-      {"help", no_argument, NULL, 'h'},
-      {"verbose", no_argument, NULL, 'v'},
-      {"exclude", required_argument, NULL, 0},
-      {NULL, 0, NULL, 0}};
+    static struct option long_options[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"verbose", no_argument, NULL, 'v'},
+        {"exclude", required_argument, NULL, 0},
+        {NULL, 0, NULL, 0}};
 
-  while ((c = getopt_long(argc, argv, "hv", long_options, &option_index)) !=
-         -1) {
-    switch (c) {
-    case 0:
-      if (strcmp("exclude", long_options[option_index].name) == 0) {
-        if (options.tar_excludes == NULL) {
-          options.tar_excludes = strlist_new();
+    while ((c = getopt_long(argc, argv, "hv", long_options, &option_index)) !=
+           -1) {
+        switch (c) {
+            case 0:
+                if (strcmp("exclude", long_options[option_index].name) == 0) {
+                    if (options.tar_excludes == NULL) {
+                        options.tar_excludes = strlist_new();
+                    }
+                    strlist_addl(&options.tar_excludes, optarg, NULL);
+                }
+                break;
+            case 'h':
+                fputs(help_info, stderr);
+                return EXIT_SUCCESS;
+            case 'v':
+                options.tar_is_verbose = 1;
+                break;
+            case '?':
+                fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
+                return EXIT_FAILURE;
+                break;
+            default:
+                abort();
         }
-        strlist_addl(&options.tar_excludes, optarg, NULL);
-      }
-      break;
-    case 'h':
-      fputs(help_info, stderr);
-      return EXIT_SUCCESS;
-    case 'v':
-      options.tar_is_verbose = 1;
-      break;
-    case '?':
-      fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[optind - 1]);
-      return EXIT_FAILURE;
-      break;
-    default:
-      abort();
     }
-  }
 
-  if (optind < argc) {
-    if (access(argv[optind], F_OK) == 0) {
-      rootfs_dir = realpath(argv[optind], NULL);
-      optind = optind + 1;
+    if (optind < argc) {
+        if (access(argv[optind], F_OK) == 0) {
+            rootfs_dir = realpath(argv[optind], NULL);
+            optind     = optind + 1;
+        } else {
+            fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
+            return EXIT_FAILURE;
+        }
     } else {
-      fprintf(stderr, "%s: Rootfs '%s' not exists.\n", program, argv[optind]);
-      return EXIT_FAILURE;
+        ROOTFS_NOT_SET
+        return EXIT_FAILURE;
     }
-  } else {
-    ROOTFS_NOT_SET
-    return EXIT_FAILURE;
-  }
 
-  if (isatty(STDOUT_FILENO)) {
-    fprintf(stderr, "%s: Refusing to write archive contents to terminal\n",
-            program);
-    exit(EXIT_FAILURE);
-  }
-
-  char **proot_argv = strlist_new();
-  char **proot_envp = strlist_new();
-  set_proot_env(&proot_envp);
-  set_proot_path(&proot_argv);
-
-  strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), "--root-id",
-               "--cwd=/", "/bin/tar", NULL);
-
-  if (options.tar_is_verbose) {
-    strlist_addl(&proot_argv, "-v", NULL);
-  }
-
-  strlist_addl(&proot_argv, "--exclude=./tmp/*", NULL);
-  strlist_addl(&proot_argv, "--exclude=.*sh_history", NULL);
-  strlist_addl(&proot_argv, my_asprintf("--exclude=" FMT_PROOT_DATA_DIR, "."),
-               NULL);
-
-  if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
-    for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
-      strlist_addl(&proot_argv,
-                   my_asprintf("--exclude=%s", options.tar_excludes[i]), NULL);
+    if (isatty(STDOUT_FILENO)) {
+        fprintf(stderr, "%s: Refusing to write archive contents to terminal\n",
+                program);
+        exit(EXIT_FAILURE);
     }
-  }
 
-  strlist_addl(&proot_argv, "-c", ".", NULL);
+    char **proot_argv = strlist_new();
+    char **proot_envp = strlist_new();
+    set_proot_env(&proot_envp);
+    set_proot_path(&proot_argv);
 
-  if (is_verbose) {
-    strlist_list(proot_argv, "proot_argv");
-  }
-  execve(proot_argv[0], proot_argv, proot_envp);
+    strlist_addl(&proot_argv, my_asprintf("--rootfs=%s", rootfs_dir), "--root-id",
+                 "--cwd=/", "/bin/tar", NULL);
 
-  return 0;
+    if (options.tar_is_verbose) {
+        strlist_addl(&proot_argv, "-v", NULL);
+    }
+
+    strlist_addl(&proot_argv, "--exclude=./tmp/*", NULL);
+    strlist_addl(&proot_argv, "--exclude=.*sh_history", NULL);
+    strlist_addl(&proot_argv, my_asprintf("--exclude=" FMT_PROOT_DATA_DIR, "."),
+                 NULL);
+
+    if (options.tar_excludes != NULL && strlist_len(options.tar_excludes) > 0) {
+        for (int i = 0; i < strlist_len(options.tar_excludes); i++) {
+            strlist_addl(&proot_argv,
+                         my_asprintf("--exclude=%s", options.tar_excludes[i]), NULL);
+        }
+    }
+
+    strlist_addl(&proot_argv, "-c", ".", NULL);
+
+    if (is_verbose) {
+        strlist_list(proot_argv, "proot_argv");
+    }
+    execve(proot_argv[0], proot_argv, proot_envp);
+
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
-  is_verbose = 0;
-  is_forced = 0;
-  program = basename(argv[0]);
+    is_verbose = 0;
+    is_forced  = 0;
+    program    = basename(argv[0]);
 
-  // Disable automatic error messages from getopt_long
-  // extern int opterr;
-  opterr = 0;
-  link2symlink_default = 0;
-  if (is_android()) {
-    link2symlink_default = 1;
-  }
+    // Disable automatic error messages from getopt_long
+    // extern int opterr;
+    opterr               = 0;
+    link2symlink_default = 0;
+    if (is_android()) {
+        link2symlink_default = 1;
+    }
 
-  help_info = my_asprintf("\
+    help_info = my_asprintf("\
 Supercharge your PRoot experience.\n\
 \n\
 Usage:\n\
@@ -991,51 +991,51 @@ Commands:\n\
 Environment variables:\n\
   PROOT               Path to proot.\n\
 ",
-                          program, program);
-  SHOW_HELP
+                            program, program);
+    SHOW_HELP
 
-  for (int i = 1; i < argc; i++) {
-    switch (argv[i][0]) {
-    case '-':
-      if (strcmp("-v", argv[i]) == 0 || strcmp("--verbose", argv[i]) == 0) {
-        is_verbose = 1;
-      } else if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
-        fputs(help_info, stderr);
-      } else if (strcmp("-f", argv[i]) == 0 ||
-                 strcmp("--force", argv[i]) == 0) {
-        is_forced = 1;
-      } else {
-        fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[i]);
-        return EXIT_FAILURE;
-      }
-      break;
-    default:
-      // Check if the process is being traced
-      if (is_traced() && !is_forced) {
-        fprintf(stderr, "%s: %s\n", program,
-                "Process is being traced already, possibly it is executed "
-                "under PRoot and will have a performance impact, pass "
-                "-f or --force to skip this check.");
-        exit(EXIT_FAILURE);
-      }
+    for (int i = 1; i < argc; i++) {
+        switch (argv[i][0]) {
+            case '-':
+                if (strcmp("-v", argv[i]) == 0 || strcmp("--verbose", argv[i]) == 0) {
+                    is_verbose = 1;
+                } else if (strcmp("-h", argv[i]) == 0 || strcmp("--help", argv[i]) == 0) {
+                    fputs(help_info, stderr);
+                } else if (strcmp("-f", argv[i]) == 0 ||
+                           strcmp("--force", argv[i]) == 0) {
+                    is_forced = 1;
+                } else {
+                    fprintf(stderr, "%s: Unknown option '%s'.\n", program, argv[i]);
+                    return EXIT_FAILURE;
+                }
+                break;
+            default:
+                // Check if the process is being traced
+                if (is_traced() && !is_forced) {
+                    fprintf(stderr, "%s: %s\n", program,
+                            "Process is being traced already, possibly it is executed "
+                            "under PRoot and will have a performance impact, pass "
+                            "-f or --force to skip this check.");
+                    exit(EXIT_FAILURE);
+                }
 
-      command = argv[i];
-      int forwarded_argc = argc - i;
-      char **forwarded_argv = argv + i;
+                command               = argv[i];
+                int    forwarded_argc = argc - i;
+                char **forwarded_argv = argv + i;
 
-      if (strcmp("install", command) == 0) {
-        return command_install(forwarded_argc, forwarded_argv);
-      } else if (strcmp("login", command) == 0) {
-        return command_login(forwarded_argc, forwarded_argv);
-      } else if (strcmp("archive", command) == 0) {
-        return command_archive(forwarded_argc, forwarded_argv);
-      } else {
-        fprintf(stderr, "%s: Unknown command '%s'.\n", program, command);
-        return EXIT_FAILURE;
-      }
-      return 0;
+                if (strcmp("install", command) == 0) {
+                    return command_install(forwarded_argc, forwarded_argv);
+                } else if (strcmp("login", command) == 0) {
+                    return command_login(forwarded_argc, forwarded_argv);
+                } else if (strcmp("archive", command) == 0) {
+                    return command_archive(forwarded_argc, forwarded_argv);
+                } else {
+                    fprintf(stderr, "%s: Unknown command '%s'.\n", program, command);
+                    return EXIT_FAILURE;
+                }
+                return 0;
+        }
     }
-  }
 
-  return 0;
+    return 0;
 }
