@@ -34,135 +34,108 @@
 
 static char *passwd_path;
 
-hidden int __getpwent_a(FILE *f, struct passwd *pw, char **line, size_t *size,
-                        struct passwd **res);
-hidden int __getpw_a(const char *name, uid_t uid, struct passwd *pw, char **buf,
-                     size_t *size, struct passwd **res);
-
-/*
- * Stolen and hacked from musl (src/passwd/getpwent_a.c)
- *
- * SPDX-FileCopyrightText: The musl Contributors
- *
- * SPDX-License-Identifier: MIT
- */
-
-static unsigned atou(char **s) {
-  unsigned x;
-  for (x = 0; **s - '0' < 10; ++*s)
-    x = 10 * x + (**s - '0');
-  return x;
-}
-
-int __getpwent_a(FILE *f, struct passwd *pw, char **line, size_t *size,
-                 struct passwd **res) {
-  ssize_t l;
-  char *s;
-  int rv = 0;
-  // int cs;
-  // pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
-  for (;;) {
-    if ((l = getline(line, size, f)) < 0) {
-      rv = ferror(f) ? errno : 0;
-      free(*line);
-      *line = 0;
-      pw = 0;
-      break;
+// Optimized number parsing
+static inline unsigned atou(char **s) {
+    unsigned x = 0;
+    while (**s >= '0' && **s <= '9') {
+        x = (x * 10) + (unsigned)((**s) - '0');
+        ++*s;
     }
-    line[0][l - 1] = 0;
-
-    s = line[0];
-    pw->pw_name = s++;
-    if (!(s = strchr(s, ':')))
-      continue;
-
-    *s++ = 0;
-    pw->pw_passwd = s;
-    if (!(s = strchr(s, ':')))
-      continue;
-
-    *s++ = 0;
-    pw->pw_uid = atou(&s);
-    if (*s != ':')
-      continue;
-
-    *s++ = 0;
-    pw->pw_gid = atou(&s);
-    if (*s != ':')
-      continue;
-
-    *s++ = 0;
-    pw->pw_gecos = s;
-    if (!(s = strchr(s, ':')))
-      continue;
-
-    *s++ = 0;
-    pw->pw_dir = s;
-    if (!(s = strchr(s, ':')))
-      continue;
-
-    *s++ = 0;
-    pw->pw_shell = s;
-    break;
-  }
-  // pthread_setcancelstate(cs, 0);
-  *res = pw;
-  if (rv)
-    errno = rv;
-  return rv;
+    return x;
 }
 
-/*
- * Stolen and hacked from musl (src/passwd/getpw_a.c)
- *
- * SPDX-FileCopyrightText: The musl Contributors
- *
- * SPDX-License-Identifier: MIT
- */
-int __getpw_a(const char *name, uid_t uid, struct passwd *pw, char **buf,
-              size_t *size, struct passwd **res) {
-  FILE *f;
-  // int cs;
-  int rv = 0;
+hidden int __getpwent_a(FILE *f, struct passwd *pw, char **line, size_t *size, struct passwd **res) {
+    ssize_t l;
+    char *s;
+    int rv = 0;
 
-  *res = 0;
+    *res = NULL;
+    
+    while ((l = getline(line, size, f)) > 0) {
+        (*line)[l - 1] = 0;
+        s = *line;
 
-  // pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
+        // Fast path for malformed lines
+        if (!strchr(s, ':')) continue;
 
-  if (passwd_path) {
-    f = fopen(passwd_path, "rbe");
-  } else {
-    fprintf(stderr, "passwd_path not set\n");
-    exit(EXIT_FAILURE);
-  }
-  if (!f) {
-    rv = errno;
-    goto done;
-  }
+        pw->pw_name = s++;
+        if (!(s = strchr(s, ':'))) continue;
+        *s++ = 0;
+        
+        pw->pw_passwd = s;
+        if (!(s = strchr(s, ':'))) continue;
+        *s++ = 0;
 
-  while (!(rv = __getpwent_a(f, pw, buf, size, res)) && *res) {
-    if ((name && !strcmp(name, (*res)->pw_name)) ||
-        (!name && (*res)->pw_uid == uid))
-      break;
-  }
-  fclose(f);
+        pw->pw_uid = atou(&s);
+        if (*s != ':') continue;
+        *s++ = 0;
 
-done:
-  // pthread_setcancelstate(cs, 0);
-  if (rv)
-    errno = rv;
-  return rv;
+        pw->pw_gid = atou(&s);
+        if (*s != ':') continue;
+        *s++ = 0;
+
+        pw->pw_gecos = s;
+        if (!(s = strchr(s, ':'))) continue;
+        *s++ = 0;
+
+        pw->pw_dir = s;
+        if (!(s = strchr(s, ':'))) continue;
+        *s++ = 0;
+
+        pw->pw_shell = s;
+        *res = pw;
+        break;
+    }
+
+    if (l < 0 && ferror(f)) {
+        rv = errno;
+    }
+
+    if (!*res) {
+        free(*line);
+        *line = NULL;
+    }
+
+    return rv;
 }
 
-struct passwd *getpw(char * passwd_file_path, const char *name, uid_t uid) {
-  passwd_path=passwd_file_path;
-  static char *line;
-  static struct passwd pw;
-  static size_t size;
+hidden int __getpw_a(const char *name, uid_t uid, struct passwd *pw, char **buf, size_t *size, struct passwd **res) {
+    FILE *f;
+    int rv = 0;
 
-  struct passwd *res;
-  __getpw_a(name, uid, &pw, &line, &size, &res);
-  return res;
+    *res = NULL;
+
+    if (!passwd_path) {
+        errno = EINVAL;
+        return EINVAL;
+    }
+
+    if (!(f = fopen(passwd_path, "re"))) {
+        return errno;
+    }
+
+    while (!(rv = __getpwent_a(f, pw, buf, size, res)) && *res) {
+        if ((name && !strcmp(name, (*res)->pw_name)) ||
+            (!name && (*res)->pw_uid == uid)) {
+            break;
+        }
+    }
+
+    fclose(f);
+    return rv;
+}
+
+struct passwd *getpw(char *passwd_file_path, const char *name, uid_t uid) {
+    static char *line;
+    static struct passwd pw;
+    static size_t size;
+    struct passwd *res;
+
+    passwd_path = passwd_file_path;
+    if (__getpw_a(name, uid, &pw, &line, &size, &res)) {
+        return NULL;
+    }
+    return res;
 }
 
 #endif

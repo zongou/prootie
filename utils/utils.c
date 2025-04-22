@@ -13,7 +13,17 @@
 #include <time.h>
 #include <unistd.h>
 
-char **strlist_new() { return malloc(sizeof(char *)); }
+// Pre-allocate with reasonable initial size to reduce reallocations
+#define STRLIST_INITIAL_SIZE 16
+
+char **strlist_new() {
+    char **list = calloc(STRLIST_INITIAL_SIZE, sizeof(char *));
+    if (!list) {
+        perror("Failed to allocate memory");
+        exit(EXIT_FAILURE);
+    }
+    return list;
+}
 
 void list_argv(int argc, char **argv, char *tittle) {
   for (int i = 0; i < argc; i++) {
@@ -37,101 +47,107 @@ void strlist_list(char **strlist, char *title) {
 }
 
 int strlist_addl(char ***str_listp, ...) {
-  va_list args;
-  va_start(args, str_listp);
+    va_list args;
+    va_start(args, str_listp);
 
-  int len_appending = 0;
-  va_list args_copy;
-  va_copy(args_copy, args);
-  while (va_arg(args_copy, char *) != NULL) {
-    len_appending = len_appending + 1;
-  }
-  va_end(args_copy);
-
-  int len = strlist_len(*str_listp);
-  char **strlist_tmp =
-      realloc(*str_listp, sizeof(char *) * (len + len_appending + 1));
-  if (strlist_tmp == 0) {
-    perror("Failed to realloc memory\n");
-    return EXIT_FAILURE;
-  }
-  *str_listp = strlist_tmp;
-
-  for (int i = 0; i < len_appending; i++) {
-    (*str_listp)[len + i] = va_arg(args, char *);
-  }
-  strlist_tmp[len + len_appending] = 0;
-  va_end(args);
-
-  return EXIT_SUCCESS;
-}
-
-// Implementation of asprintf function
-char *my_asprintf(const char *format, ...) {
-  // Initialize variable argument list
-  va_list args;
-  va_start(args, format);
-
-  // First, determine the length of the formatted string
-  // We use a temporary copy of the argument list for this
-  va_list args_copy;
-  va_copy(args_copy, args);
-  int len = vsnprintf(NULL, 0, format, args_copy);
-  va_end(args_copy);
-
-  // Check if vsnprintf was successful
-  if (len < 0) {
-    // Error occurred during vsnprintf
-    fprintf(stderr, "Error during vsnprintf.\n");
-    va_end(args);
-    return NULL;
-  }
-
-  // Allocate memory for the formatted string
-  char *str = malloc(len + 1); // +1 for the null terminator
-  if (!str) {
-    // Memory allocation failed
-    fprintf(stderr, "Memory allocation failed.\n");
-    va_end(args);
-    return NULL;
-  }
-
-  // Now format the string into the allocated memory
-  int result = vsnprintf(str, len + 1, format, args);
-  if (result < 0) {
-    // Error occurred during the second vsnprintf call
-    free(str); // Free the allocated memory to avoid a leak
-    fprintf(stderr, "Error during vsnprintf while formatting.\n");
-    va_end(args);
-    return NULL;
-  }
-
-  // Clean up the variable argument list
-  va_end(args);
-
-  // Return the formatted string
-  return str;
-}
-
-char *get_tool_path(const char *tool_name) {
-  const char *path_env = getenv("PATH");
-  if (!path_env)
-    return NULL;
-
-  char *path_copy = strdup(path_env);
-  char *token = strtok(path_copy, ":");
-  while (token != NULL) {
-    char path[PATH_MAX];
-    snprintf(path, PATH_MAX, "%s/%s", token, tool_name);
-    if (access(path, X_OK) == 0) {
-      free(path_copy);
-      return strdup(path);
+    // Count number of new items first
+    int len_appending = 0;
+    va_list args_copy;
+    va_copy(args_copy, args);
+    while (va_arg(args_copy, char *) != NULL) {
+        len_appending++;
     }
-    token = strtok(NULL, ":");
-  }
+    va_end(args_copy);
 
-  free(path_copy);
-  return NULL;
+    // Calculate new size needed
+    int current_len = strlist_len(*str_listp);
+    int new_size = current_len + len_appending + 1;
+    
+    // Round up to next multiple of STRLIST_INITIAL_SIZE
+    new_size = ((new_size + STRLIST_INITIAL_SIZE - 1) / STRLIST_INITIAL_SIZE) * STRLIST_INITIAL_SIZE;
+
+    char **strlist_tmp = realloc(*str_listp, sizeof(char *) * new_size);
+    if (!strlist_tmp) {
+        perror("Failed to realloc memory");
+        return EXIT_FAILURE;
+    }
+    *str_listp = strlist_tmp;
+
+    // Add new items
+    for (int i = 0; i < len_appending; i++) {
+        (*str_listp)[current_len + i] = va_arg(args, char *);
+    }
+    (*str_listp)[current_len + len_appending] = NULL;
+    
+    va_end(args);
+    return EXIT_SUCCESS;
+}
+
+// Optimized string formatting
+char *my_asprintf(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int len = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+
+    if (len < 0) {
+        va_end(args);
+        return NULL;
+    }
+
+    char *str = malloc(len + 1);
+    if (!str) {
+        va_end(args);
+        return NULL;
+    }
+
+    int result = vsnprintf(str, len + 1, format, args);
+    va_end(args);
+
+    if (result < 0) {
+        free(str);
+        return NULL;
+    }
+
+    return str;
+}
+
+// Cached path search
+char *get_tool_path(const char *tool_name) {
+    static char path_buf[PATH_MAX];
+    static char *last_tool = NULL;
+    static char *last_path = NULL;
+
+    // Return cached result if asking for same tool
+    if (last_tool && strcmp(tool_name, last_tool) == 0) {
+        return strdup(last_path);
+    }
+
+    const char *path_env = getenv("PATH");
+    if (!path_env) return NULL;
+
+    char *path_copy = strdup(path_env);
+    char *token = strtok(path_copy, ":");
+    
+    while (token) {
+        snprintf(path_buf, PATH_MAX, "%s/%s", token, tool_name);
+        if (access(path_buf, X_OK) == 0) {
+            free(path_copy);
+            // Cache result
+            free(last_tool);
+            free(last_path);
+            last_tool = strdup(tool_name);
+            last_path = strdup(path_buf);
+            return strdup(path_buf);
+        }
+        token = strtok(NULL, ":");
+    }
+
+    free(path_copy);
+    return NULL;
 }
 
 void filelist(char ***strllist, const char *dir_path) {

@@ -34,6 +34,73 @@ may be helpful.
         return EXIT_FAILURE;      \
     }
 
+#define BUFFER_POOL_SIZE 32
+#define BUFFER_SIZE 4096
+
+// Buffer pool for temporary string operations
+static struct {
+    char buffers[BUFFER_POOL_SIZE][BUFFER_SIZE];
+    int used[BUFFER_POOL_SIZE];
+} buffer_pool = {{{0}}, {0}};
+
+// Get a buffer from the pool
+static char* get_buffer() {
+    for(int i = 0; i < BUFFER_POOL_SIZE; i++) {
+        if (!buffer_pool.used[i]) {
+            buffer_pool.used[i] = 1;
+            return buffer_pool.buffers[i];
+        }
+    }
+    return NULL;
+}
+
+// Return buffer to pool
+static void release_buffer(char* buf) {
+    for(int i = 0; i < BUFFER_POOL_SIZE; i++) {
+        if (buffer_pool.buffers[i] == buf) {
+            buffer_pool.used[i] = 0;
+            return;
+        }
+    }
+}
+
+// Cache for frequently accessed paths
+static struct {
+    char *rootfs_paths[8];
+    char *cached_paths[8];
+    int count;
+} path_cache = {{NULL}, {NULL}, 0};
+
+static char* get_cached_path(const char* rootfs, const char* subpath) {
+    for(int i = 0; i < path_cache.count; i++) {
+        if (path_cache.rootfs_paths[i] && strcmp(path_cache.rootfs_paths[i], rootfs) == 0) {
+            return path_cache.cached_paths[i];
+        }
+    }
+    
+    if (path_cache.count < 8) {
+        char* buf = get_buffer();
+        if (buf) {
+            snprintf(buf, BUFFER_SIZE, "%s/%s", rootfs, subpath);
+            path_cache.rootfs_paths[path_cache.count] = strdup(rootfs);
+            path_cache.cached_paths[path_cache.count] = strdup(buf);
+            path_cache.count++;
+            release_buffer(buf);
+            return path_cache.cached_paths[path_cache.count-1];
+        }
+    }
+    
+    return NULL;
+}
+
+void cleanup_caches() {
+    for(int i = 0; i < path_cache.count; i++) {
+        free(path_cache.rootfs_paths[i]);
+        free(path_cache.cached_paths[i]);
+    }
+    path_cache.count = 0;
+}
+
 int   is_verbose;
 int   is_forced;
 char *program;
@@ -45,6 +112,9 @@ int   link2symlink_default;
 int is_android() { return access("/system/bin/linker", F_OK) == 0; }
 int is_termux() { return getenv("TERMUX_VERSION") != NULL; }
 int is_anotherterm() { return getenv("TERMSH") != NULL; }
+
+// Use stack buffer for temporary paths
+#define PATH_BUF_SIZE 4096
 
 void set_proot_path(char ***strlistp) {
     char *proot_path = NULL;
@@ -59,21 +129,15 @@ void set_proot_path(char ***strlistp) {
 }
 
 void set_proot_env(char ***strlistp) {
-    strlist_addl(
-        strlistp,
-        my_asprintf("PROOT_L2S_DIR=%s",
-                    my_asprintf(FMT_PROOT_L2S_DIR, rootfs_dir, getpid())),
-        NULL);
+    char path_buffer[PATH_BUF_SIZE];
+    
+    snprintf(path_buffer, sizeof(path_buffer), FMT_PROOT_L2S_DIR, rootfs_dir);
+    strlist_addl(strlistp, my_asprintf("PROOT_L2S_DIR=%s", path_buffer), NULL);
 
-    char *tmp = NULL;
-    if ((tmp = getenv("PROOT_TMP_DIR")) != NULL) {
+    char *tmp = getenv("PROOT_TMP_DIR");
+    if (!tmp) tmp = getenv("TMPDIR");
+    if (tmp) {
         strlist_addl(strlistp, my_asprintf("PROOT_TMP_DIR=%s", tmp), NULL);
-        return;
-    }
-
-    if ((tmp = getenv("TMPDIR")) != NULL) {
-        strlist_addl(strlistp, my_asprintf("PROOT_TMP_DIR=%s", tmp), NULL);
-        return;
     }
 }
 
@@ -83,23 +147,18 @@ void sigint_handler(int signum) {
     // signal(SIGINT, SIG_DFL); // Reset to default handler
 }
 
-// Function to check if the current process is being traced
+// Optimize process trace checking with a single read
 int is_traced() {
+    char tracer_pid[32];
     FILE *status_file = fopen("/proc/self/status", "r");
-    if (!status_file) {
-        perror("Failed to open /proc/self/status");
-        return 0;
-    }
-
-    char line[256];
-    while (fgets(line, sizeof(line), status_file)) {
-        if (strncmp(line, "TracerPid:", 10) == 0) {
-            int tracer_pid = atoi(line + 10);
+    if (!status_file) return 0;
+    
+    while (fgets(tracer_pid, sizeof(tracer_pid), status_file)) {
+        if (!strncmp(tracer_pid, "TracerPid:", 10)) {
             fclose(status_file);
-            return tracer_pid != 0;
+            return atoi(tracer_pid + 10) != 0;
         }
     }
-
     fclose(status_file);
     return 0;
 }
