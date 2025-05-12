@@ -44,6 +44,18 @@ meta_to_table() {
 	done
 }
 
+inline_print() {
+	count=0
+	while IFS= read -r line; do
+		printf "\033[2K\r%d %s" "${count}" ""
+		count=$((count + 1))
+	done
+}
+
+install_rootfs() {
+	gum spin --title="Extracting" -- prootie install -v "$1"
+}
+
 command_install() {
 	STR_INSTALL_FROM_FILE="Install from local file"
 	lxc_mirror="$(
@@ -70,13 +82,15 @@ command_install() {
 		fi
 
 		file=$(gum file "${BACKUPS_DIR}")
-		rootfs_name=$(gum input --placeholder="Input rootfs name.")
+		default_name=$(echo "${file}" | cut -d. -f1)
+		rootfs_name=$(gum input --header="Distro Name:" --value="${default_name}" --placeholder="Input distro name")
 		case "${file}" in
 		*.tar.gz)
-			gzip -d <"${file}" | prootie install -v "${DISTROS_DIR}/${rootfs_name}"
+			count=0
+			gzip -d <"${file}" | install_rootfs "${DISTROS_DIR}/${rootfs_name}"
 			;;
 		*.tar.xz)
-			xz -d <"${file}" | prootie install -v "${DISTROS_DIR}/${rootfs_name}"
+			xz -d <"${file}" | install_rootfs "${DISTROS_DIR}/${rootfs_name}"
 			;;
 		esac
 		;;
@@ -99,9 +113,10 @@ command_install() {
 		timestamp=$(echo "${selection}" | cut -d',' -f5)
 
 		archive_url=${lxc_mirror}/images/${distro}/${release}/${arch}/${variant}/${timestamp}/rootfs.tar.xz
-		rootfs_default=${DISTROS_DIR}/${distro}-${release}-${variant}
-		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs_default}" --placeholder="Input rootfs")
-		download_to_stdout "${archive_url}" | xz -d | prootie install -v "${rootfs}"
+		rootfs_name_default=${distro}-${release}-${variant}
+		rootfs_name=$(gum input --header="Distro Name:" --value="${rootfs_name_default}" --placeholder="Input distro name")
+		rootfs="${DISTROS_DIR}/${rootfs_name}"
+		download_to_stdout "${archive_url}" | xz -d | install_rootfs "${rootfs}"
 
 		case "${distro}" in
 		ubuntu) touch "${rootfs}/root/.hushlogin" ;;

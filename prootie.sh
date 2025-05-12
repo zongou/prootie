@@ -13,6 +13,16 @@ is_android() { test -f /system/bin/linker; }
 is_termux() { test "${TERMUX_VERSION+1}"; }
 is_anotherterm() { test "${TERMSH+1}"; }
 
+## [ROOTFS] [ITERM]
+get_proot_conf() {
+	case "$2" in
+	proot_data_dir) echo "$1/.proot" ;;
+	proot_bind_dir) echo "$1/.proot/bind" ;;
+	proot_l2s_dir) echo "$1/.proot/l2s" ;;
+	*) ;;
+	esac
+}
+
 ## [TITLE] [ARG]...
 list_args() {
 	title="$1"
@@ -23,16 +33,6 @@ list_args() {
 		argc=$((argc + 1))
 		shift
 	done
-}
-
-## [ROOTFS] [ITERM]
-get_proot_conf() {
-	case "$2" in
-	proot_data_dir) echo "$1/.proot" ;;
-	proot_fakerootfs_dir) echo "$1/.proot/rootfs" ;;
-	proot_l2s_dir) echo "$1/.proot/l2s" ;;
-	*) ;;
-	esac
 }
 
 set_proot_path() {
@@ -184,26 +184,26 @@ Tar-related options:
 	fi
 	"${PROOT}" "$@"
 
-	proot_fakerootfs_dir="$(get_proot_conf "${_opt_rootfs_dir}" proot_fakerootfs_dir)"
+	proot_bind_dir="$(get_proot_conf "${_opt_rootfs_dir}" proot_bind_dir)"
 
-	mkdir -p "${proot_fakerootfs_dir}/proc"
-	cat >"${proot_fakerootfs_dir}/proc/loadavg" <<-EOF
+	mkdir -p "${proot_bind_dir}/proc"
+	cat >"${proot_bind_dir}/proc/loadavg" <<-EOF
 		0.00 0.00 0.00 0/0 0
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/proc/stat" <<-EOF
+	cat >"${proot_bind_dir}/proc/stat" <<-EOF
 		cpu  0 0 0 0 0 0 0 0 0 0
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/proc/uptime" <<-EOF
+	cat >"${proot_bind_dir}/proc/uptime" <<-EOF
 		0.00 0.00
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/proc/version" <<-EOF
+	cat >"${proot_bind_dir}/proc/version" <<-EOF
 		Linux localhost 6.1.0-22 #1 SMP PREEMPT_DYNAMIC 6.1.94-1 (2024-06-21) GNU/Linux
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/proc/vmstat" <<-EOF
+	cat >"${proot_bind_dir}/proc/vmstat" <<-EOF
 		nr_free_pages 136777
 		nr_zone_inactive_anon 14538
 		nr_zone_active_anon 215
@@ -365,31 +365,31 @@ Tar-related options:
 		nr_unstable 0
 	EOF
 
-	mkdir -p "${proot_fakerootfs_dir}/proc/sys/kernel"
-	cat >"${proot_fakerootfs_dir}/proc/sys/kernel/cap_last_cap" <<-EOF
+	mkdir -p "${proot_bind_dir}/proc/sys/kernel"
+	cat >"${proot_bind_dir}/proc/sys/kernel/cap_last_cap" <<-EOF
 		40
 	EOF
 
-	mkdir -p "${proot_fakerootfs_dir}/proc/sys/fs/inotify"
-	cat >"${proot_fakerootfs_dir}/proc/sys/fs/inotify/max_queued_events" <<-EOF
+	mkdir -p "${proot_bind_dir}/proc/sys/fs/inotify"
+	cat >"${proot_bind_dir}/proc/sys/fs/inotify/max_queued_events" <<-EOF
 		16384
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/proc/sys/fs/inotify/max_user_instances" <<-EOF
+	cat >"${proot_bind_dir}/proc/sys/fs/inotify/max_user_instances" <<-EOF
 		128
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/proc/sys/fs/inotify/max_user_watches" <<-EOF
+	cat >"${proot_bind_dir}/proc/sys/fs/inotify/max_user_watches" <<-EOF
 		65536
 	EOF
 
-	mkdir -p "${proot_fakerootfs_dir}/etc"
-	cat >"${proot_fakerootfs_dir}/etc/resolv.conf" <<-EOF
+	mkdir -p "${proot_bind_dir}/etc"
+	cat >"${proot_bind_dir}/etc/resolv.conf" <<-EOF
 		nameserver 8.8.8.8
 		nameserver 8.8.4.4
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/etc/hosts" <<-EOF
+	cat >"${proot_bind_dir}/etc/hosts" <<-EOF
 		::1         localhost.localdomain localhost ip6-localhost ip6-loopback
 		fe00::0     ip6-localnet
 		ff00::0     ip6-mcastprefix
@@ -398,14 +398,14 @@ Tar-related options:
 		ff02::3     ip6-allhosts
 	EOF
 
-	mkdir -p "${proot_fakerootfs_dir}/etc/profile.d"
-	cat >"${proot_fakerootfs_dir}/etc/profile.d/locale.sh" <<-EOF
+	mkdir -p "${proot_bind_dir}/etc/profile.d"
+	cat >"${proot_bind_dir}/etc/profile.d/locale.sh" <<-EOF
 		export CHARSET=\${CHARSET:-UTF-8}
 		export LANG=\${LANG:-C.UTF-8}
 		export LC_COLLATE=\${LC_COLLATE:-C}
 	EOF
 
-	cat >"${proot_fakerootfs_dir}/etc/profile.d/proot.sh" <<-EOF
+	cat >"${proot_bind_dir}/etc/profile.d/proot.sh" <<-EOF
 		export COLORTERM=truecolor
 		[ -z "\$LANG" ] && export LANG=C.UTF-8
 		export TERM=xterm-256color
@@ -416,7 +416,7 @@ Tar-related options:
 	EOF
 
 	if is_android; then
-		cat >"${proot_fakerootfs_dir}/etc/profile.d/host_utils.sh" <<-EOF
+		cat >"${proot_bind_dir}/etc/profile.d/host_utils.sh" <<-EOF
 			## prootie host utils
 			export ANDROID_DATA='${ANDROID_DATA}'
 			export ANDROID_RUNTIME_ROOT='${ANDROID_RUNTIME_ROOT}'
@@ -425,7 +425,7 @@ Tar-related options:
 		EOF
 
 		if is_anotherterm; then
-			cat <<-EOF >>"${proot_fakerootfs_dir}/etc/profile.d/host_utils.sh"
+			cat <<-EOF >>"${proot_bind_dir}/etc/profile.d/host_utils.sh"
 				export DATA_DIR='$(realpath "${DATA_DIR}")'
 				export TERMSH_UID='${USER_ID-$(id -u)}'
 				export TERMSH='${LIB_DIR}/libtermsh.so'
@@ -433,7 +433,7 @@ Tar-related options:
 		fi
 
 		if test "${PREFIX+1}"; then
-			cat <<-EOF >>"${proot_fakerootfs_dir}/etc/profile.d/host_utils.sh"
+			cat <<-EOF >>"${proot_bind_dir}/etc/profile.d/host_utils.sh"
 				export PREFIX='${PREFIX}'
 				export PATH="\${PATH}:${PREFIX}/bin"
 			EOF
@@ -660,22 +660,22 @@ PRoot-related options:
 	set -- "$@" "--bind=/sys"
 
 	## Map static fake rootfs files
-	proot_fakerootfs_dir=$(get_proot_conf "${_opt_rootfs_dir}" proot_fakerootfs_dir)
-	prefix=$(echo "${proot_fakerootfs_dir}" | wc -m)
-	for f in $(find "${proot_fakerootfs_dir}" -type f | cut -b"${prefix}"-); do
+	proot_bind_dir=$(get_proot_conf "${_opt_rootfs_dir}" proot_bind_dir)
+	prefix=$(echo "${proot_bind_dir}" | wc -m)
+	for f in $(find "${proot_bind_dir}" -type f | cut -b"${prefix}"-); do
 		case "${f}" in
 		/proc/*)
 			if ! cat "${f}" >/dev/null 2>&1; then
-				set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
+				set -- "$@" "--bind=${proot_bind_dir}${f}:${f}"
 			fi
 			;;
 		/etc/profile.d/host_utils.sh)
 			if ${_opt_is_host_utils}; then
-				set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
+				set -- "$@" "--bind=${proot_bind_dir}${f}:${f}"
 			fi
 			;;
 		*)
-			set -- "$@" "--bind=${proot_fakerootfs_dir}${f}:${f}"
+			set -- "$@" "--bind=${proot_bind_dir}${f}:${f}"
 			;;
 		esac
 	done

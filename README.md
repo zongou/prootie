@@ -1,5 +1,78 @@
 # prootie
 
+## Build
+
+| key     | value     |
+| ------- | --------- |
+| program | ./prootie |
+
+Build this program
+
+```sh
+${CC-cc} -o ${program} prootie.c ${CFLAGS-} ${LDFLAGS-} "$@"
+```
+
+### Run
+
+Build and run
+
+- [x] sanitize
+
+```sh
+if [ ${sanitize} -eq 1 ]; then
+    CFLAGS="${CFLAGS-} -fsanitize=address"
+fi
+
+export CFLAGS
+${MD_EXE} --file=${MD_FILE} build
+${program} "$@"
+```
+
+### Release
+
+Build static and stripped
+
+- [x] static
+- [x] stripped
+- [x] opt_size
+
+```sh
+if [ ${static} -eq 1 ]; then
+    LDFLAGS="${LDFLAGS+${LDFLAGS}} -static"
+fi
+
+if [ ${stripped} -eq 1 ]; then
+    LDFLAGS="${LDFLAGS+${LDFLAGS}} -s"
+fi
+
+if [ ${opt_size} -eq 1 ]; then
+    LDFLAGS="${LDFLAGS+${LDFLAGS}} -Os"
+fi
+
+export LDFLAGS
+${MD_EXE} --file=${MD_FILE} build
+du -ahd0 ${program}
+file ${program}
+```
+
+### Install
+
+Install this program
+
+```sh
+if ! test "${CC+1}" && command -v zig >/dev/null; then
+    export CC="zig cc --target=$(uname -m)-linux-musl"
+fi
+
+${MD_EXE} --file=${MD_FILE} release
+program=$(basename "${PWD}")
+if command -v sudo >/dev/null; then
+    sudo install "${program}" "/usr/local/bin/${program}"
+elif test "${PREFIX+1}"; then
+    install "${program}" "${PREFIX}/bin/${program}"
+fi
+```
+
 Supercharges your PRoot experience.
 
 - Login 50x faster than proot-distro.
@@ -45,56 +118,43 @@ prootie_tui
 
 ## Manage distros manually
 
-### Install rootfs
+## alpine
 
 ```sh
+export CC=/opt/cosmo/bin/cosmocc
+export MODE=tiny
+$MD_EXE --file=${MD_FILE} release
+
 set -eu
 arch=$(uname -m)
 version=3.20.3
 version_main=$(echo "${version}" | grep -Eo "^[0-9]\.[0-9]+")
-archive_url=https://dl-cdn.alpinelinux.org/alpine/v${version_main}/releases/${arch}/alpine-minirootfs-${version}-${arch}.tar.gz
-rootfs="${HOME}/.distros/alpine"
+# mirror=https://dl-cdn.alpinelinux.org
+mirror=https://mirrors.ustc.edu.cn
+archive_url=${mirror}/alpine/v${version_main}/releases/${arch}/alpine-minirootfs-${version}-${arch}.tar.gz
 
+rootfs="${HOME}/.distros/alpine"
 mkdir -p "$(dirname "${rootfs}")"
-curl -SsLk "${archive_url}" | gzip -d | prootie -v install "${rootfs}"
+curl -SsLk "${archive_url}" | gzip -d | ./prootie -v install -v "${rootfs}"
 ```
 
-### Login rootfs
+### Login
 
 ```sh
 prootie login "${HOME}/.distros/alpine"
 ```
 
-### Archive rootfs
+### Archive
 
 ```sh
 prootie archive "${HOME}/.distros/alpine" | gzip > alpine.tar.gz
 ```
 
-### Clone rootfs
+### Clone
 
 ```sh
 prootie archive "${HOME}/.distros/alpine" | prootie install "${HOME}/.distros/alpine2"
 ```
-
-## Tested distros
-
-| distro            | status | notes                                          |
-| ----------------- | ------ | ---------------------------------------------- |
-| almalinux (9)     | OK     |                                                |
-| alt (p11)         | OK     |                                                |
-| alpine (3.20)     | OK     |                                                |
-| amazonlinux       | OK     |                                                |
-| archlinux         | OK     |                                                |
-| debian (bookworm) | OK     |                                                |
-| voidlinux (musl)  | OK     | `vi /etc/passwd` to change login shell to bash |
-| fedora (40)       | OK     |                                                |
-| ubuntu (noble)    | OK     | `touch /root/.hushlogin`                       |
-| busybox (1.36.1)  | OK     |                                                |
-| gentoo (openrc)   | OK     |                                                |
-| kali              | OK     |                                                |
-| rockylinux (9)    | OK     |                                                |
-| openwrt (23.05)   | OK     |                                                |
 
 ## More
 
