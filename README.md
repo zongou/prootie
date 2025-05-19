@@ -91,24 +91,7 @@ Supercharges your PRoot experience.
 | `prootie.sh login $HOME/.distros/alpine -- pwd` | 0.337 ± 0.023 |   0.307 |   0.387 |   8.51 ± 1.78 |
 | `prootie login $HOME/.distros/alpine -- pwd`    | 0.040 ± 0.008 |   0.027 |   0.067 |          1.00 |
 
-## Compile from source
-
-On Termux:
-
-```sh
-cc -o "${PREFIX}/bin/prootie" prootie.c -s -Os
-cp prootie_tui "${PREFIX}/bin/prootie_tui"
-```
-
-On Linux:
-
-```sh
-cc -o prootie prootie.c -s -Os
-sudo mv prootie /usr/local/bin/prootie
-sudo cp prootie_tui /usr/bin/prootie_tui
-```
-
-## Manage distros with TUI script
+## TUI
 
 make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
 
@@ -116,15 +99,11 @@ make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
 prootie_tui
 ```
 
-## Manage distros manually
+## Manually
 
-## alpine
+### alpine
 
 ```sh
-export CC=/opt/cosmo/bin/cosmocc
-export MODE=tiny
-$MD_EXE --file=${MD_FILE} release
-
 set -eu
 arch=$(uname -m)
 version=3.20.3
@@ -147,7 +126,7 @@ prootie login "${HOME}/.distros/alpine"
 ### Archive
 
 ```sh
-prootie archive "${HOME}/.distros/alpine" | gzip > alpine.tar.gz
+prootie archive "${HOME}/.distros/alpine"
 ```
 
 ### Clone

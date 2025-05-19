@@ -1050,7 +1050,6 @@ Tar-relavent options:\n\
 
     if (optind < argc) {
         if (access(argv[optind], F_OK) == 0) {
-            mkdir_wrapper(argv[optind]);
             config.rootfs_path = realpath(argv[optind], NULL);
             optind             = optind + 1;
         } else {
