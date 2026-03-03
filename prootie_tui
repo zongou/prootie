@@ -3,6 +3,7 @@ set -eu
 
 DISTROS_DIR="${HOME}/.distros"
 BACKUPS_DIR="${HOME}/.distros/.backup"
+PATH=${PWD}:${PATH}
 
 download_to_stdout() {
 	if command -v curl >/dev/null; then
@@ -99,9 +100,9 @@ command_install() {
 		timestamp=$(echo "${selection}" | cut -d',' -f5)
 
 		archive_url=${lxc_mirror}/images/${distro}/${release}/${arch}/${variant}/${timestamp}/rootfs.tar.xz
-		rootfs_default=${DISTROS_DIR}/${distro}-${release}-${variant}
-		rootfs=$(gum input --header="Input rootfs:" --value="${rootfs_default}" --placeholder="Input rootfs")
-		download_to_stdout "${archive_url}" | xz -d | prootie install -v "${rootfs}"
+		rootfs_id_default=${distro}-${release}-${variant}
+		rootfs_id=$(gum input --header="Input rootfs:" --value="${rootfs_id_default}" --placeholder="Input rootfs")
+		download_to_stdout "${archive_url}" | xz -d | prootie install -v "${DISTROS_DIR}/${rootfs_id}"
 
 		case "${distro}" in
 		ubuntu) touch "${rootfs}/root/.hushlogin" ;;
@@ -110,15 +111,21 @@ command_install() {
 		esac
 
 		if gum confirm "Login now?"; then
-			prootie login "${rootfs}"
+			prootie login "${DISTROS_DIR}/${rootfs_id}"
 		fi
 		;;
 	esac
 }
 
 command_login() {
-	rootfs="${DISTROS_DIR}/$(choose_rootfs)"
-	prootie login "${rootfs}"
+	if test ${1+1}; then
+		rootfs_id=${1}
+		shift
+		prootie login "${DISTROS_DIR}/${rootfs_id}" "$@"
+	else
+		rootfs="${DISTROS_DIR}/$(choose_rootfs)"
+		prootie login "${rootfs}"
+	fi
 }
 
 command_archive() {
@@ -160,10 +167,10 @@ main() {
 	CMD_EXIT="exit"
 	if test $# -gt 0; then
 		case "$1" in
-		"${CMD_INSTALL}") command_install ;;
-		"${CMD_LOGIN}") command_login ;;
-		"${CMD_ARCHIVE}") command_archive ;;
-		"${CMD_EXIT}") exit 0 ;;
+		"${CMD_INSTALL}") shift && command_install $@ ;;
+		"${CMD_LOGIN}") shift && command_login $@ ;;
+		"${CMD_ARCHIVE}") shift && command_archive $@ ;;
+		"${CMD_EXIT}") exit 0 $@ ;;
 		*) exit 1 ;;
 		esac
 	else
