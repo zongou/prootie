@@ -102,7 +102,8 @@ command_install() {
 		archive_url=${lxc_mirror}/images/${distro}/${release}/${arch}/${variant}/${timestamp}/rootfs.tar.xz
 		rootfs_id_default=${distro}-${release}-${variant}
 		rootfs_id=$(gum input --header="Input rootfs:" --value="${rootfs_id_default}" --placeholder="Input rootfs")
-		download_to_stdout "${archive_url}" | xz -d | prootie install -v "${DISTROS_DIR}/${rootfs_id}"
+		rootfs="${DISTROS_DIR}/${rootfs_id}"
+		download_to_stdout "${archive_url}" | xz -d | prootie install -v "${rootfs}"
 
 		case "${distro}" in
 		ubuntu) touch "${rootfs}/root/.hushlogin" ;;
