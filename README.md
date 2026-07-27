@@ -18,34 +18,60 @@ Supercharges your PRoot experience.
 | `prootie.sh login $HOME/.distros/alpine -- pwd` | 0.337 ± 0.023 |   0.307 |   0.387 |   8.51 ± 1.78 |
 | `prootie login $HOME/.distros/alpine -- pwd`    | 0.040 ± 0.008 |   0.027 |   0.067 |          1.00 |
 
-## Compile from source
+## Build And Install
 
-On Termux:
+### Build
 
-```sh
-cc -o "${PREFIX}/bin/prootie" prootie.c -s -Os
-cp prootie_tui "${PREFIX}/bin/prootie_tui"
-```
-
-On Linux:
+Build with cc
 
 ```sh
-cc -o prootie prootie.c -s -Os
-sudo mv prootie /usr/local/bin/prootie
-sudo cp prootie_tui /usr/bin/prootie_tui
+target=$(uname -m)-linux-musl
+zig cc -target ${target} -o prootie prootie.c "$@"
 ```
 
-## Manage distros with TUI script
+### Build:zig
+
+Build with zig
+
+Build this program.
+
+```sh
+target=$(uname -m)-linux-musl
+zig cc -target ${target} -o prootie prootie.c "$@"
+```
+
+### Install
+
+Install what is built
+
+```sh
+program=prootie
+if command -v sudo >/dev/null; then
+    sudo install "${program}" "/usr/local/bin/${program}"
+    sudo install "${program}-tui" "/usr/local/bin/${program}-tui"
+elif test "${PREFIX+1}"; then
+    install "${program}" "${PREFIX}/bin/${program}"
+    install "${program}-tui" "${PREFIX}/bin/${program}-tui"
+fi
+```
+
+## TUI
+
+Manage distros easily
 
 make sure you have [`gum`](https://github.com/charmbracelet/gum) installed
 
 ```sh
-prootie_tui
+prootie-tui
 ```
 
-## Manage distros manually
+## Examples
 
-### Install rootfs
+Prootie command examples
+
+### Prootie:Install
+
+Install a rootfs
 
 ```sh
 set -eu
@@ -59,25 +85,31 @@ mkdir -p "$(dirname "${rootfs}")"
 curl -SsLk "${archive_url}" | gzip -d | prootie -v install "${rootfs}"
 ```
 
-### Login rootfs
+### Prootie:Login
+
+Start rootfs login shell
 
 ```sh
 prootie login "${HOME}/.distros/alpine"
 ```
 
-### Archive rootfs
+### Prootie:Archive
+
+Archive a rootfs
 
 ```sh
 prootie archive "${HOME}/.distros/alpine" | gzip > alpine.tar.gz
 ```
 
-### Clone rootfs
+### Clone
+
+Clone a rootfs
 
 ```sh
 prootie archive "${HOME}/.distros/alpine" | prootie install "${HOME}/.distros/alpine2"
 ```
 
-## Tested distros
+## Tested distros list
 
 | distro            | status | notes                                          |
 | ----------------- | ------ | ---------------------------------------------- |
