@@ -25,8 +25,7 @@ Supercharges your PRoot experience.
 Build with cc
 
 ```sh
-target=$(uname -m)-linux-musl
-zig cc -target ${target} -o prootie prootie.c "$@"
+cc -o prootie prootie.c "$@"
 ```
 
 ### Build:zig
